@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html, body {
+    @apply bg-background text-ink antialiased;
+    font-family: theme('fontFamily.sans');
+  }
+
+  /* Subtle scrollbar so chrome doesn't fight the design. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-secondary-50;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-secondary-300 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-secondary-400;
+  }
+
+  /* Focus rings — accessible by default everywhere. */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary-500 ring-offset-2 ring-offset-background;
+  }
+}
+
+@media print {
+  aside,
+  header,
+  footer,
+  button,
+  [role="dialog"] {
+    display: none !important;
+  }
+
+  main {
+    overflow: visible !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .shadow-card {
+    box-shadow: none !important;
+  }
+
+  .app-watermark {
+    display: none !important;
+  }
+}
+
+@layer components {
+  /* Subtle Clyvero ERP authenticity layer across desktop, mobile and print. */
+  .app-watermark {
+    pointer-events: none;
+    user-select: none;
+    position: fixed;
+    inset: -24vh -22vw;
+    z-index: 60;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(16rem, 1fr));
+    place-items: center;
+    gap: clamp(4rem, 9vw, 9rem);
+    overflow: hidden;
+    opacity: 0.025;
+    transform: rotate(-25deg);
+    transform-origin: center;
+  }
+
+  .app-watermark span {
+    color: #1d4ed8;
+    font-size: clamp(1.5rem, 3.2vw, 3.5rem);
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 640px) {
+    .app-watermark {
+      grid-template-columns: repeat(2, minmax(12rem, 1fr));
+      gap: 4.5rem 3rem;
+      opacity: 0.022;
+    }
+  }
+  /* Skeleton shimmer used by <Skeleton />. */
+  .skeleton {
+    @apply relative overflow-hidden bg-secondary-200 rounded-card;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.6) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+}
