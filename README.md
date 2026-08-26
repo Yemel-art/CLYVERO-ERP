@@ -2,8 +2,7 @@
 
 A production-grade, role-based school management system built for K–12 institutions in Cameroon. Monorepo containing a Laravel 12 + PostgreSQL 16 API backend and a Next.js 15 (App Router) frontend.
 
-> **Author:** Junior (BSc Cybersecurity, ICT University, Yaoundé)
-> **Supervisor:** Engr. NEBASI
+> **Author:** Yemeli Tane Loic (BSc Cybersecurity, ICT University, Yaoundé)
 
 ## What's inside
 
