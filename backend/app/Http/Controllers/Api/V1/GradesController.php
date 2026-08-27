@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 final class GradesController extends ApiController
 {
@@ -77,12 +78,20 @@ final class GradesController extends ApiController
 
         $class = SchoolClass::query()->findOrFail($data['class_id']);
         $term = Term::query()->findOrFail($data['term_id']);
-        abort_unless($class->academic_year_id === $term->academic_year_id, 422);
+        if ($class->academic_year_id !== $term->academic_year_id) {
+            throw ValidationException::withMessages([
+                'term_id' => ['The selected term does not belong to this class academic year.'],
+            ]);
+        }
 
         $classStudentIds = Student::query()->where('class_id', $class->id)->pluck('id')->sort()->values();
         foreach ($data['subjects'] as $subjectRow) {
             $submittedStudentIds = collect($subjectRow['entries'])->pluck('student_id')->unique()->sort()->values();
-            abort_unless($submittedStudentIds->all() === $classStudentIds->all(), 422);
+            if ($submittedStudentIds->all() !== $classStudentIds->all()) {
+                throw ValidationException::withMessages([
+                    'roster' => ['The class roster changed while this gradebook was open. Refresh the page and enter marks for every current student.'],
+                ]);
+            }
         }
 
         if ($request->user()?->isTeacher()) {
@@ -182,8 +191,12 @@ final class GradesController extends ApiController
         $classId = $assessments->first()->class_id;
         $grouped = collect($data['scores'])->groupBy('assessment_id');
         $submittedStudentIds = collect($data['scores'])->pluck('student_id')->unique()->values();
-        abort_unless(Student::query()->where('class_id', $classId)
-            ->whereIn('id', $submittedStudentIds)->count() === $submittedStudentIds->count(), 422);
+        if (Student::query()->where('class_id', $classId)
+            ->whereIn('id', $submittedStudentIds)->count() !== $submittedStudentIds->count()) {
+            throw ValidationException::withMessages([
+                'roster' => ['One or more students no longer belong to this class. Refresh the gradebook before saving corrections.'],
+            ]);
+        }
 
         foreach ($grouped as $assessmentId => $scores) {
             /** @var Assessment|null $assessment */

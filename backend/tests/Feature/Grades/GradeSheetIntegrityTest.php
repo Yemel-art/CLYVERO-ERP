@@ -84,7 +84,12 @@ final class GradeSheetIntegrityTest extends TestCase
         $incomplete = $payload;
         $incomplete['title'] = 'Incomplete attempt';
         array_pop($incomplete['subjects'][0]['entries']);
-        $this->postJson('/api/v1/grades/grade-sheets', $incomplete)->assertUnprocessable();
+        $this->postJson('/api/v1/grades/grade-sheets', $incomplete)
+            ->assertUnprocessable()
+            ->assertJsonPath(
+                'errors.roster.0',
+                'The class roster changed while this gradebook was open. Refresh the page and enter marks for every current student.',
+            );
         $this->assertSame(3, Assessment::query()->count());
     }
 }

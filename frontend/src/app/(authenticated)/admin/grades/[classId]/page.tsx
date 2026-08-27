@@ -19,6 +19,13 @@ import type { AssessmentType } from '@/types/grades';
 import { useAuthStore } from '@/store/auth';
 import { useTeacherDashboard } from '@/hooks/dashboard';
 
+function apiErrorMessage(error: any, fallback: string): string {
+  const validation = error?.response?.data?.errors as Record<string, string[]> | undefined;
+  const firstValidation = validation ? Object.values(validation).flat().find(Boolean) : undefined;
+  const candidate = firstValidation ?? error?.response?.data?.message ?? error?.message;
+  return typeof candidate === 'string' && candidate.trim() ? candidate : fallback;
+}
+
 const TYPES: { value: AssessmentType; label: string }[] = [
   { value: 'sequence', label: 'Sequence' },
   { value: 'quiz', label: 'Quiz' },
@@ -100,7 +107,7 @@ export default function ClassGradebookPage() {
       setOpen(false);
       setSheetScores({});
     } catch (err: any) {
-      toast.error(err?.response?.data?.message ?? 'Could not save the grade sheet.');
+      toast.error(apiErrorMessage(err, 'Could not save the grade sheet.'));
     }
   };
 
@@ -135,7 +142,7 @@ export default function ClassGradebookPage() {
       toast.success('Grade corrections saved.');
       setEditingSheet(null);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message ?? 'Could not update the grade sheet.');
+      toast.error(apiErrorMessage(error, 'Could not update the grade sheet.'));
     }
   };
 

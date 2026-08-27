@@ -166,7 +166,10 @@ export function useClass(id: string | undefined) {
     queryKey: ['academic', 'classes', 'detail', id],
     queryFn: () => academicApi.getClass(id as string),
     enabled: Boolean(id),
-    staleTime: ACADEMIC_STRUCTURE_STALE_TIME,
+    // A class detail contains its live student roster. Never reuse a stale
+    // roster after registration, import, transfer, archive, or restoration.
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 }
 

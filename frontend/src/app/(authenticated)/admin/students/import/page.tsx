@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, CheckCircle2, FileSpreadsheet, RefreshCw, Upload, Users, WalletCards } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/Button';
@@ -51,6 +52,7 @@ function classMatches(source: string, item: { name: string; grade_level?: string
 }
 
 export default function OfficialStudentImportPage() {
+  const queryClient = useQueryClient();
   const { language } = useTranslation();
   const role = useAuthStore((state) => state.user?.role.name);
   const studentsBase = role === 'secretary' ? '/secretary/students' : '/admin/students';
@@ -182,6 +184,12 @@ export default function OfficialStudentImportPage() {
         duplicateAction,
       );
       setPreview(result);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['students'] }),
+        queryClient.invalidateQueries({ queryKey: ['academic', 'classes'] }),
+        queryClient.invalidateQueries({ queryKey: ['grades'] }),
+        queryClient.invalidateQueries({ queryKey: ['attendance'] }),
+      ]);
       toast.success(ui('Import terminé sans création de paiement.', 'Import completed without creating payments.'));
     } catch (error: any) { setPageError(message(error, ui('L’import a échoué.', 'Import failed.'))); }
     finally { setBusy(false); }

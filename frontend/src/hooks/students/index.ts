@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { studentsApi } from '@/lib/api/students';
 import type { Student, StudentFilters, StudentStatistics } from '@/types/student';
 
@@ -11,6 +11,12 @@ const KEYS = {
   history: (id: string) => ['students', 'history', id] as const,
   stats: () => ['students', 'statistics'] as const,
 };
+
+function invalidateStudentMembershipQueries(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: ['academic', 'classes'] });
+  void client.invalidateQueries({ queryKey: ['grades'] });
+  void client.invalidateQueries({ queryKey: ['attendance'] });
+}
 
 /** Paginated student list. */
 export function useStudents(filters: StudentFilters) {
@@ -53,6 +59,7 @@ export function useCreateStudent() {
     mutationFn: (payload: Record<string, unknown>) => studentsApi.create(payload),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: KEYS.all });
+      invalidateStudentMembershipQueries(qc);
     },
   });
 }
@@ -65,6 +72,7 @@ export function useUpdateStudent(id: string) {
     onSuccess: (updated: Student) => {
       qc.setQueryData<Student>(KEYS.detail(id), updated);
       void qc.invalidateQueries({ queryKey: KEYS.all });
+      invalidateStudentMembershipQueries(qc);
     },
   });
 }
@@ -76,6 +84,7 @@ export function useArchiveStudent() {
     mutationFn: (id: string) => studentsApi.archive(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: KEYS.all });
+      invalidateStudentMembershipQueries(qc);
     },
   });
 }
@@ -87,6 +96,7 @@ export function useRestoreStudent() {
     mutationFn: (id: string) => studentsApi.restore(id),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: KEYS.all });
+      invalidateStudentMembershipQueries(qc);
     },
   });
 }
@@ -96,7 +106,10 @@ export function usePermanentlyDeleteStudent() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, confirmation, reason = 'registration_error' }: { id: string; confirmation: string; reason?: 'test_record' | 'duplicate_record' | 'registration_error' }) => studentsApi.permanentlyDelete(id, confirmation, reason),
-    onSuccess: () => { void qc.invalidateQueries({ queryKey: KEYS.all }); },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: KEYS.all });
+      invalidateStudentMembershipQueries(qc);
+    },
   });
 }
 
@@ -108,6 +121,7 @@ export function useUploadStudentPhoto(id: string) {
     onSuccess: (updated: Student) => {
       qc.setQueryData<Student>(KEYS.detail(id), updated);
       void qc.invalidateQueries({ queryKey: KEYS.all });
+      invalidateStudentMembershipQueries(qc);
     },
   });
 }

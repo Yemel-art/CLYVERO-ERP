@@ -8,6 +8,7 @@ use App\Models\AcademicYear;
 use App\Models\Role;
 use App\Models\SchoolClass;
 use App\Models\Subject;
+use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\Term;
 use App\Models\User;
@@ -117,5 +118,31 @@ class AcademicApiTest extends TestCase
             'teacher_id'  => $teacher->id,
             'coefficient' => 4,
         ]);
+    }
+
+    public function test_class_detail_student_count_always_matches_returned_roster(): void
+    {
+        Sanctum::actingAs($this->admin, ['*']);
+        $year = AcademicYear::query()->where('status', AcademicYear::STATUS_ACTIVE)->firstOrFail();
+        $class = SchoolClass::query()->create([
+            'academic_year_id' => $year->id,
+            'education_system' => 'secondary_general',
+            'name' => 'Form 2 Roster',
+            'grade_level' => 'Form 2',
+            'cycle' => 'first_cycle',
+            'language' => 'en',
+            'capacity' => 40,
+            'is_active' => true,
+        ]);
+        Student::factory()->count(10)->create([
+            'school_id' => $this->admin->school_id,
+            'academic_year_id' => $year->id,
+            'class_id' => $class->id,
+        ]);
+
+        $this->getJson("/api/v1/classes/{$class->id}")
+            ->assertOk()
+            ->assertJsonPath('data.students_count', 10)
+            ->assertJsonCount(10, 'data.students');
     }
 }
