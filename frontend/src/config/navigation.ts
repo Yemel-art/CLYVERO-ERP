@@ -105,7 +105,6 @@ export const NAV_MAP: Record<UserRoleName, NavGroup[]> = {
     ]},
     { label: 'My Work', items: [
       { label: 'My Classes',  href: '/teacher/classes',    icon: BookOpen,       permission: 'class.view'      },
-      { label: 'Register Student', href: '/teacher/students/create', icon: GraduationCap, permission: 'student.create' },
       { label: 'Attendance',  href: '/teacher/attendance', icon: ClipboardCheck, permission: 'attendance.view' },
       { label: 'Grades',      href: '/teacher/grades',     icon: BarChart3,      permission: 'grade.view'      },
       { label: 'Timetable',   href: '/teacher/timetable',  icon: Calendar,       permission: 'timetable.view'  },

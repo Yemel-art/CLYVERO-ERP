@@ -176,6 +176,11 @@ final class TeacherApiTest extends TestCase
             ->assertJsonPath('data.form_master_classes.0.id', $class->id)
             ->assertJsonPath('data.teaching.0.class_id', $class->id)
             ->assertJsonPath('data.teaching.0.subject_id', $subject->id);
+
+        $this->getJson("/api/v1/classes?academic_year_id={$year->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $class->id);
     }
 
     public function test_archive_and_restore(): void

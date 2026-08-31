@@ -9,7 +9,6 @@ use App\Enums\Gender;
 use App\Models\Student;
 use App\Models\SchoolClass;
 use App\Models\AcademicYear;
-use App\Models\Teacher;
 use App\Services\TenantContext;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
@@ -154,15 +153,6 @@ class StoreStudentRequest extends FormRequest
             if ($validator->errors()->hasAny(['class_id', 'academic_year_id', 'cycle', 'speciality'])) return;
             $class = SchoolClass::query()->find($this->input('class_id'));
             if (! $class) return;
-            $user = $this->user();
-            if ($user?->isTeacher()) {
-                $teacherId = Teacher::resolveForUser($user)?->id;
-                $assigned = $teacherId !== null && ($class->form_master_id === $teacherId
-                    || $class->subjects()->wherePivot('teacher_id', $teacherId)->exists());
-                if (! $assigned) {
-                    $validator->errors()->add('class_id', 'Teachers may register students only in an assigned class.');
-                }
-            }
             if ($class->academic_year_id !== $this->input('academic_year_id')) {
                 $validator->errors()->add('class_id', 'The selected class does not belong to the selected academic year.');
             }

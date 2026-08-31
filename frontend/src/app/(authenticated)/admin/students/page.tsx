@@ -72,7 +72,7 @@ export default function StudentsListPage() {
           )}
           <div>
             <p className="font-medium text-ink">{s.full_name}</p>
-            <p className="text-xs text-secondary-500">{s.admission_number}</p>
+            <p className="text-xs text-secondary-500">{s.admission_number}{s.class?.name ? ` · ${s.class.name}` : ''}</p>
           </div>
         </div>
       ),
@@ -170,7 +170,7 @@ export default function StudentsListPage() {
       <div className="mb-4 flex items-center gap-3">
         <div className="flex-1">
           <Input
-            placeholder="Search by name, admission number, or email…"
+            placeholder="Search by name, admission number, email, or class…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             leftIcon={<Search className="h-4 w-4" />}

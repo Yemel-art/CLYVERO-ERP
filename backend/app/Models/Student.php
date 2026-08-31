@@ -200,18 +200,26 @@ class Student extends Model
         return $q->where('status', StudentStatus::Archived->value);
     }
 
-    /**
-     * Full-text-ish search across name, admission number, and email.
-     */
+    /** Search by identity details or any current/historical class assignment. */
     public function scopeSearch(Builder $q, string $term): Builder
     {
-        $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $term) . '%';
+        $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], trim($term)) . '%';
         return $q->where(function (Builder $q) use ($like): void {
             $q->where('first_name', 'ilike', $like)
                 ->orWhere('last_name', 'ilike', $like)
                 ->orWhere('middle_name', 'ilike', $like)
                 ->orWhere('admission_number', 'ilike', $like)
-                ->orWhere('email', 'ilike', $like);
+                ->orWhere('official_matricule', 'ilike', $like)
+                ->orWhere('email', 'ilike', $like)
+                ->orWhereRaw("concat_ws(' ', first_name, middle_name, last_name) ILIKE ?", [$like])
+                ->orWhereHas('schoolClass', function (Builder $class) use ($like): void {
+                    $class->where('name', 'ilike', $like)
+                        ->orWhere('grade_level', 'ilike', $like);
+                })
+                ->orWhereHas('enrollments.schoolClass', function (Builder $class) use ($like): void {
+                    $class->where('name', 'ilike', $like)
+                        ->orWhere('grade_level', 'ilike', $like);
+                });
         });
     }
 }

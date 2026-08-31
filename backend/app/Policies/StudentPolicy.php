@@ -23,7 +23,11 @@ class StudentPolicy
         return true;
     }
 
-    public function create(User $user): bool { return $user->hasPermission('student.create'); }
+    public function create(User $user): bool
+    {
+        return $user->hasPermission('student.create')
+            && ($user->isAdministrator() || $user->isSecretary());
+    }
     public function update(User $user, Student $_student): bool
     {
         return $user->hasPermission('student.edit') && ($user->isAdministrator() || $user->isSecretary());

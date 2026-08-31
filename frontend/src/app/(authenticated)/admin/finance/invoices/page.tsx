@@ -56,7 +56,7 @@ export default function InvoicesPage() {
   const { data: studentResults } = useQuery({
     queryKey: ['students', 'search', debouncedStudent],
     queryFn: () => studentsApi.list({ q: debouncedStudent, per_page: 8 }),
-    enabled: debouncedStudent.length >= 2,
+    enabled: debouncedStudent.trim().length >= 1,
   });
   const [studentId, setStudentId] = useState<string | null>(null);
   const [studentName, setStudentName] = useState('');
@@ -148,7 +148,7 @@ export default function InvoicesPage() {
             </CardContent></Card>
           ) : (
             <>
-              <Input label="Find student" placeholder="Search by name or admission number…"
+              <Input label="Find student" placeholder="Search by name, admission number, or class…"
                 value={studentQuery} onChange={(e) => setStudentQuery(e.target.value)} />
               {studentResults && studentResults.data.length > 0 && (
                 <ul className="max-h-48 space-y-1 overflow-y-auto rounded-card border border-secondary-200 p-1">
@@ -156,7 +156,7 @@ export default function InvoicesPage() {
                     <li key={s.id}>
                       <button onClick={() => { setStudentId(s.id); setStudentName(s.full_name); }}
                         className="flex w-full items-center justify-between rounded-button p-2 text-left text-sm hover:bg-secondary-50">
-                        <span><span className="font-medium">{s.full_name}</span> <span className="text-xs text-secondary-500">{s.admission_number}</span></span>
+                        <span><span className="font-medium">{s.full_name}</span> <span className="text-xs text-secondary-500">{s.admission_number}{s.class?.name ? ` · ${s.class.name}` : ''}</span></span>
                       </button>
                     </li>
                   ))}

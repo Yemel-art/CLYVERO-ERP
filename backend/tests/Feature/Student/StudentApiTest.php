@@ -156,6 +156,8 @@ final class StudentApiTest extends TestCase
         $this->student(['first_name' => 'Marie', 'last_name' => 'Ngono']);
         $this->getJson('/api/v1/students?q=Junior')->assertOk()
             ->assertJsonCount(1, 'data')->assertJsonPath('data.0.first_name', 'Junior');
+        $this->getJson('/api/v1/students?q=J')->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.first_name', 'Junior');
 
         Student::factory()->count(13)->create([
             'school_id' => $this->school->id,
@@ -166,16 +168,32 @@ final class StudentApiTest extends TestCase
             ->assertJsonCount(10, 'data')->assertJsonPath('meta.total', 15);
     }
 
+    public function test_list_can_find_students_by_full_name_and_class(): void
+    {
+        $this->actingAsAdministrator();
+        $student = $this->student(['first_name' => 'Junior', 'last_name' => 'Tah']);
+
+        $this->getJson('/api/v1/students?q=Junior%20Tah')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $student->id)
+            ->assertJsonPath('data.0.class.name', 'Form 1');
+
+        $this->getJson('/api/v1/students?q=Form%201')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $student->id);
+    }
+
     public function test_unauthenticated_request_is_rejected(): void
     {
         $this->getJson('/api/v1/students')->assertUnauthorized()->assertJsonPath('error_code', 'unauthenticated');
     }
 
-    public function test_assigned_teacher_can_register_a_student(): void
+    public function test_teacher_cannot_register_a_student_even_when_assigned_to_the_class(): void
     {
         $this->actingAsAssignedTeacher();
         $this->postJson('/api/v1/students', $this->registrationPayload('MEC-2026-T001'))
-            ->assertCreated()->assertJsonPath('data.admission_number', 'MEC-2026-T001');
+            ->assertForbidden();
+        $this->assertDatabaseMissing('students', ['admission_number' => 'MEC-2026-T001']);
     }
 
     public function test_administrator_can_view_a_student_and_unknown_id_returns_404(): void

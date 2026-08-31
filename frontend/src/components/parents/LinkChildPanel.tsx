@@ -37,11 +37,11 @@ export function LinkChildPanel({ parent }: { parent: ParentGuardian }) {
 
   // Debounced search for students.
   useEffect(() => {
-    if (debouncedQ.length < 2) { setResults([]); return; }
+    if (debouncedQ.trim().length < 1) { setResults([]); return; }
     let cancelled = false;
     (async () => {
       try {
-        const page = await studentsApi.list({ q: debouncedQ, per_page: 8 });
+        const page = await studentsApi.list({ q: debouncedQ.trim(), per_page: 8 });
         if (!cancelled) setResults(page.data);
       } catch { /* swallow */ }
     })();
@@ -156,7 +156,7 @@ export function LinkChildPanel({ parent }: { parent: ParentGuardian }) {
           ) : (
             <>
               <Input
-                placeholder="Search students by name or admission number…"
+                placeholder="Search students by name, admission number, or class…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 leftIcon={<Search className="h-4 w-4" />}
@@ -177,7 +177,7 @@ export function LinkChildPanel({ parent }: { parent: ParentGuardian }) {
                             : <Avatar name={s.full_name} size="sm" />}
                           <span className="flex-1">
                             <span className="font-medium text-ink">{s.full_name}</span>
-                            <span className="ml-2 text-xs text-secondary-500">{s.admission_number}</span>
+                            <span className="ml-2 text-xs text-secondary-500">{s.admission_number}{s.class?.name ? ` · ${s.class.name}` : ''}</span>
                           </span>
                           {alreadyLinked && <Badge variant="secondary">Already linked</Badge>}
                         </button>

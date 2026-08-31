@@ -1,1 +1,5 @@
-export { default } from '@/app/(authenticated)/admin/students/create/page';
+import { redirect } from 'next/navigation';
+
+export default function TeacherStudentRegistrationBlockedPage() {
+  redirect('/forbidden');
+}

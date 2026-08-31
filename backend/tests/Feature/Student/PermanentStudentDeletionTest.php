@@ -18,6 +18,28 @@ final class PermanentStudentDeletionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_admin_can_permanently_delete_an_archived_test_student(): void
+    {
+        $this->seed();
+        $admin = User::query()->whereHas('role', fn ($query) => $query->where('name', 'administrator'))->firstOrFail();
+        $year = AcademicYear::query()->where('school_id', $admin->school_id)->where('status', 'active')->firstOrFail();
+        Sanctum::actingAs($admin, ['*']);
+        $student = Student::factory()->create([
+            'school_id' => $admin->school_id,
+            'academic_year_id' => $year->id,
+            'status' => 'archived',
+            'deleted_at' => now(),
+        ]);
+
+        $this->deleteJson("/api/v1/students/{$student->id}/permanent", [
+            'confirmation' => '  '.mb_strtolower($student->admission_number).'  ',
+            'reason' => 'test_record',
+            'acknowledge_permanent' => true,
+        ])->assertOk();
+
+        $this->assertDatabaseMissing('students', ['id' => $student->id]);
+    }
+
     public function test_admin_can_delete_unpaid_test_student_but_not_financial_history(): void
     {
         $this->seed();

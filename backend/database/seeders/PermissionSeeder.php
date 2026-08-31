@@ -122,7 +122,7 @@ class PermissionSeeder extends Seeder
 
             UserRole::Teacher->value => [
                 'dashboard.view_teacher',
-                'student.view', 'student.create',
+                'student.view',
                 'class.view',
                 'subject.view',
                 'attendance.view', 'attendance.create', 'attendance.edit', 'attendance.record',

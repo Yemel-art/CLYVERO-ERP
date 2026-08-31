@@ -84,7 +84,13 @@ class EloquentStudentRepository extends BaseRepository implements StudentReposit
     {
         // Search term against name, admission number, email.
         if (! empty($filters['q'])) {
-            $query->search((string) $filters['q']);
+            $term = trim((string) $filters['q']);
+            $query->search($term);
+            $prefix = str_replace(['%', '_'], ['\\%', '\\_'], $term).'%';
+            $query->orderByRaw(
+                'CASE WHEN first_name ILIKE ? OR last_name ILIKE ? OR admission_number ILIKE ? OR official_matricule ILIKE ? THEN 0 ELSE 1 END',
+                [$prefix, $prefix, $prefix, $prefix],
+            );
         }
 
         if (! empty($filters['status'])) {

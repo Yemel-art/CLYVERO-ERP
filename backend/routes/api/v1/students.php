@@ -27,7 +27,10 @@ Route::prefix('students')->group(function (): void {
     Route::get('/', [StudentController::class, 'index']);
     Route::post('/', [StudentController::class, 'store']);
     Route::get('/{student}/academic-history', [StudentController::class, 'academicHistory']);
-    Route::delete('/{student}/permanent', [StudentController::class, 'permanentlyDelete']);
+    // The cleanup screen intentionally includes archived records. Restrict
+    // soft-deleted binding support to this destructive route only.
+    Route::delete('/{student}/permanent', [StudentController::class, 'permanentlyDelete'])
+        ->withTrashed();
     Route::get('/{student}', [StudentController::class, 'show']);
     Route::put('/{student}', [StudentController::class, 'update']);
     Route::patch('/{student}', [StudentController::class, 'update']);

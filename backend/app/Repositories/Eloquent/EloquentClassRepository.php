@@ -26,7 +26,7 @@ class EloquentClassRepository extends BaseRepository implements ClassRepositoryI
                     return;
                 }
                 $assigned->where('form_master_id', $teacherId)
-                    ->orWhereHas('subjects', fn ($subject) => $subject->wherePivot('teacher_id', $teacherId));
+                    ->orWhereHas('subjects', fn ($subject) => $subject->where('class_subject.teacher_id', $teacherId));
             });
         }
         if (! empty($filters['include_archived'])) $q->withTrashed();

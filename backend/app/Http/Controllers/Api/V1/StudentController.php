@@ -51,7 +51,7 @@ final class StudentController extends ApiController
 
         $page = $this->students->list(
             filters: $filters,
-            with: ['academicYear'],
+            with: ['academicYear', 'schoolClass'],
             perPage: (int) $request->integer('per_page', 20),
             sortBy: (string) $request->input('sort', 'last_name'),
             sortOrder: (string) $request->input('order', 'asc'),
