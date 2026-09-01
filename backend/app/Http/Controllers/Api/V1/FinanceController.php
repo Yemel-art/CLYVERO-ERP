@@ -34,6 +34,7 @@ final class FinanceController extends ApiController
     public function summary(Request $request): JsonResponse
     {
         abort_unless($request->user()?->hasPermission('finance.view'), 403);
+        abort_if($request->user()?->isParent(), 403);
 
         return $this->ok($this->finance->summary(), 'Finance summary retrieved.');
     }
@@ -74,6 +75,11 @@ final class FinanceController extends ApiController
         // Payments are included so the finance dashboard can present an
         // auditable daily collection ledger without issuing one query per invoice.
         $q = Invoice::query()->with(['student', 'payments']);
+        if ($request->user()?->isParent()) {
+            $q->whereHas('student.parents', fn ($parents) => $parents
+                ->where('parents.user_id', $request->user()->id)
+                ->where('parents.is_active', true));
+        }
         if ($request->filled('student_id')) $q->where('student_id', $request->input('student_id'));
         if ($request->filled('status'))     $q->where('status', $request->input('status'));
         if ($request->filled('q')) {
@@ -92,6 +98,7 @@ final class FinanceController extends ApiController
     public function showInvoice(Request $request, Invoice $invoice): JsonResponse
     {
         abort_unless($request->user()?->hasPermission('invoice.view'), 403);
+        $this->authorize('view', $invoice->student);
         return $this->ok(
             new InvoiceResource($invoice->load(['student', 'items', 'payments'])),
             'Invoice retrieved.',
@@ -136,6 +143,7 @@ final class FinanceController extends ApiController
 
     public function receipt(ReceiptRequest $request, Payment $payment): \Symfony\Component\HttpFoundation\Response
     {
+        $this->authorize('view', $payment->student);
         abort_if($payment->voided_at !== null, 409, 'A voided payment cannot produce a valid receipt.');
 
         return $this->receipts->download(
@@ -148,6 +156,8 @@ final class FinanceController extends ApiController
     public function studentBalance(Request $request, string $studentId): JsonResponse
     {
         abort_unless($request->user()?->hasPermission('invoice.view'), 403);
+        $student = Student::findOrFail($studentId);
+        $this->authorize('view', $student);
         return $this->ok(['balance' => $this->finance->studentBalance($studentId)], 'Balance retrieved.');
     }
 }

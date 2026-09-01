@@ -41,15 +41,6 @@ Route::prefix('v1')->group(function (): void {
         ]);
     })->middleware('signed:relative')->name('public.media');
 
-    // Backward compatibility for photos saved before the unified media route.
-    Route::get('/student-photos/{filename}', fn (string $filename) => redirect(
-        \Illuminate\Support\Facades\URL::temporarySignedRoute(
-            'public.media', now()->addMinutes(5),
-            ['directory' => 'students', 'filename' => basename($filename)],
-            false,
-        ),
-    ));
-
     // ─── Authenticated routes ──────────────────────────────────────
     Route::middleware(['auth:sanctum', 'throttle:api'])->group(function (): void {
         Route::post('/logout',        [AuthController::class, 'logout']);

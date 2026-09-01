@@ -27,6 +27,7 @@ final class AttendanceController extends ApiController
     public function index(Request $request): JsonResponse
     {
         abort_unless($request->user()?->hasPermission('attendance.view'), 403);
+        abort_if($request->user()?->isParent(), 403);
         $q = AttendanceSession::query()->with(['takenBy']);
         if ($request->filled('class_id')) $q->where('class_id', $request->input('class_id'));
         if ($request->filled('from'))     $q->where('date', '>=', $request->input('from'));
@@ -53,6 +54,7 @@ final class AttendanceController extends ApiController
     public function show(AttendanceSession $session): JsonResponse
     {
         abort_unless(request()->user()?->hasPermission('attendance.view'), 403);
+        abort_if(request()->user()?->isParent(), 403);
         return $this->ok(
             new AttendanceSessionResource($session->load(['records.student', 'takenBy'])),
             'Session retrieved.',
@@ -88,6 +90,8 @@ final class AttendanceController extends ApiController
 
     public function stats(Request $request, AttendanceSession $session): JsonResponse
     {
+        abort_unless($request->user()?->hasPermission('attendance.view'), 403);
+        abort_if($request->user()?->isParent(), 403);
         return $this->ok($this->attendance->sessionStats($session), 'Statistics.');
     }
 

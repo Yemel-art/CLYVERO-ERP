@@ -31,6 +31,7 @@ final class GradesController extends ApiController
     public function index(Request $request): JsonResponse
     {
         abort_unless($request->user()?->hasPermission('grade.view'), 403);
+        abort_if($request->user()?->isParent(), 403);
 
         $q = Assessment::query()->with(['subject', 'term']);
         if ($request->user()?->isTeacher()) {
@@ -114,6 +115,7 @@ final class GradesController extends ApiController
     public function gradeSheets(Request $request): JsonResponse
     {
         abort_unless($request->user()?->hasPermission('grade.view'), 403);
+        abort_if($request->user()?->isParent(), 403);
         $filters = $request->validate([
             'class_id' => ['required', 'uuid', 'exists:school_classes,id'],
             'term_id' => ['required', 'uuid', 'exists:terms,id'],
@@ -220,6 +222,7 @@ final class GradesController extends ApiController
     public function show(Assessment $assessment): JsonResponse
     {
         abort_unless(request()->user()?->hasPermission('grade.view'), 403);
+        abort_if(request()->user()?->isParent(), 403);
         $this->ensureTeacherAssignment(request(), $assessment);
         $assessment = $this->grades->syncAssessmentStudents($assessment);
         return $this->ok(
@@ -299,6 +302,7 @@ final class GradesController extends ApiController
     public function classRanking(Request $request, string $classId, string $termId): JsonResponse
     {
         abort_unless($request->user()?->hasPermission('grade.view'), 403);
+        abort_if($request->user()?->isParent(), 403);
         /** @var SchoolClass $class */
         $class = SchoolClass::findOrFail($classId);
         /** @var Term $term */

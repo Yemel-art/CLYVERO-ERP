@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Attendance;
 
+use App\Enums\UserRole;
 use App\Models\AcademicYear;
 use App\Models\AttendanceSession;
+use App\Models\ParentGuardian;
+use App\Models\Role;
 use App\Models\SchoolClass;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -92,5 +96,36 @@ class AttendanceApiTest extends TestCase
         $this->postJson("/api/v1/attendance/sessions/{$sessionId}/records", ['entries' => $entries])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['session']);
+    }
+
+    public function test_parent_cannot_read_class_wide_attendance_sessions(): void
+    {
+        Sanctum::actingAs($this->admin, ['*']);
+        $sessionId = $this->postJson('/api/v1/attendance/sessions', [
+            'class_id' => $this->class->id,
+            'date' => '2026-10-03',
+        ])->assertOk()->json('data.id');
+
+        $parentRole = Role::query()->where('name', UserRole::Parent->value)->firstOrFail();
+        $parentUser = User::factory()->create([
+            'school_id' => $this->admin->school_id,
+            'role_id' => $parentRole->id,
+        ]);
+        $parent = ParentGuardian::factory()->create([
+            'school_id' => $this->admin->school_id,
+            'user_id' => $parentUser->id,
+            'is_active' => true,
+        ]);
+        $parent->students()->attach($this->students[0]->id, [
+            'id' => (string) Str::uuid(),
+            'relationship' => 'Parent',
+            'is_primary' => true,
+        ]);
+        Sanctum::actingAs($parentUser, ['*']);
+
+        $this->getJson('/api/v1/attendance/sessions')->assertForbidden();
+        $this->getJson("/api/v1/attendance/sessions/{$sessionId}")->assertForbidden();
+        $this->getJson("/api/v1/attendance/sessions/{$sessionId}/stats")->assertForbidden();
+        $this->getJson("/api/v1/attendance/students/{$this->students[0]->id}/summary")->assertOk();
     }
 }
