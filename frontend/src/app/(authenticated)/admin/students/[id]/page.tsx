@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Pencil, Archive as ArchiveIcon, RotateCcw, ArrowLeft } from 'lucide-react';
+import { Pencil, Archive as ArchiveIcon, RotateCcw, ArrowLeft, CreditCard, Download } from 'lucide-react';
+import { toast } from 'sonner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -13,6 +14,7 @@ import { ArchiveStudentDialog, RestoreStudentDialog } from '@/components/student
 import { useStudent, useStudentAcademicHistory } from '@/hooks/students';
 import { useAuthStore } from '@/store/auth';
 import { cn } from '@/lib/utils/cn';
+import { studentsApi } from '@/lib/api/students';
 
 type Tab = 'personal' | 'contact' | 'family' | 'health' | 'history';
 
@@ -50,6 +52,7 @@ export default function StudentProfilePage() {
   const [tab, setTab] = useState<Tab>('personal');
   const [archiveOpen, setArchiveOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
+  const [isDownloadingIdCard, setIsDownloadingIdCard] = useState(false);
 
   if (isLoading) {
     return (
@@ -75,6 +78,29 @@ export default function StudentProfilePage() {
   }
 
   const isArchived = student.status === 'archived';
+  const cardLanguage = student.class?.language === 'fr' ? 'fr' : 'en';
+
+  const downloadIdCard = async () => {
+    setIsDownloadingIdCard(true);
+    try {
+      const blob = await studentsApi.downloadIdCard(student.id);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `student-id-card-${student.admission_number}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast.success(cardLanguage === 'fr' ? 'Carte scolaire téléchargée.' : 'Student ID card downloaded.');
+    } catch {
+      toast.error(cardLanguage === 'fr'
+        ? 'Impossible de générer la carte. Vérifiez la classe, l’année scolaire et la photo.'
+        : 'Unable to generate the card. Check the class, academic year, and photo.');
+    } finally {
+      setIsDownloadingIdCard(false);
+    }
+  };
 
   return (
     <div>
@@ -127,6 +153,65 @@ export default function StudentProfilePage() {
               </p>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Student identity card */}
+      <Card className="mb-6 overflow-hidden">
+        <CardHeader className="border-b border-secondary-200 bg-secondary-50">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CreditCard className="h-5 w-5 text-primary-600" />
+                {cardLanguage === 'fr' ? 'Carte d’identité scolaire' : 'Student Identity Card'}
+              </CardTitle>
+              <p className="mt-1 text-xs text-secondary-500">
+                {cardLanguage === 'fr'
+                  ? 'La langue est déterminée automatiquement par la section de la classe.'
+                  : 'The language is selected automatically from the class section.'}
+              </p>
+            </div>
+            {hasPermission('report_card.generate') && !isArchived && (
+              <Button
+                leftIcon={<Download className="h-4 w-4" />}
+                isLoading={isDownloadingIdCard}
+                onClick={() => { void downloadIdCard(); }}
+              >
+                {cardLanguage === 'fr' ? 'Exporter en PDF' : 'Export PDF'}
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="py-5">
+          <div className="relative mx-auto grid aspect-[1.586/1] w-full max-w-[680px] grid-cols-[112px_minmax(0,1fr)] items-start gap-5 overflow-hidden rounded-2xl border-[6px] border-primary-600 bg-white p-4 pt-16 shadow-xl">
+            <div className="absolute -right-12 -top-20 h-48 w-48 rotate-45 bg-primary-100" />
+            <div className="absolute inset-x-2 top-2 border-b-2 border-primary-600 pb-2 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-secondary-600">{cardLanguage === 'fr' ? 'République du Cameroun · Paix – Travail – Patrie' : 'Republic of Cameroon · Peace – Work – Fatherland'}</p>
+              <p className="text-sm font-black uppercase tracking-wide text-primary-700">{cardLanguage === 'fr' ? 'Carte d’identité scolaire' : 'Student Identity Card'}</p>
+            </div>
+            {student.photo_url ? (
+              <img src={student.photo_url} alt="" className="h-32 w-24 border-2 border-primary-500 object-cover p-1" />
+            ) : (
+              <div className="flex h-32 w-24 items-center justify-center border-2 border-primary-500 bg-secondary-100 text-2xl font-black text-primary-600">
+                {student.initials}
+              </div>
+            )}
+            <dl className="relative grid min-w-0 grid-cols-[108px_minmax(0,1fr)] items-start gap-x-3 gap-y-1 text-xs sm:text-sm [&>dd]:min-w-0 [&>dd]:font-semibold [&>dt]:whitespace-nowrap [&>dt]:text-secondary-500">
+              <dt>{cardLanguage === 'fr' ? 'Nom :' : 'Last name:'}</dt><dd className="truncate uppercase">{student.last_name}</dd>
+              <dt>{cardLanguage === 'fr' ? 'Prénom(s) :' : 'First name(s):'}</dt><dd className="truncate uppercase">{[student.first_name, student.middle_name].filter(Boolean).join(' ')}</dd>
+              <dt>{cardLanguage === 'fr' ? 'Né(e) le :' : 'Born on:'}</dt><dd>{student.date_of_birth ?? '—'}</dd>
+              <dt>{cardLanguage === 'fr' ? 'À :' : 'At:'}</dt><dd className="truncate uppercase">{student.place_of_birth ?? '—'}</dd>
+              <dt>{cardLanguage === 'fr' ? 'Sexe / Âge :' : 'Gender / Age:'}</dt><dd>{student.gender === 'female' ? 'F' : student.gender === 'male' ? 'M' : '—'} / {student.age ?? '—'}</dd>
+              <dt className="mt-1 border-l-4 border-primary-600 bg-secondary-100 px-2 py-1">{cardLanguage === 'fr' ? 'Classe :' : 'Class:'}</dt><dd className="mt-1 line-clamp-2 min-h-8 bg-secondary-100 px-2 py-1 text-primary-700">{student.class?.identity_label ?? '—'}</dd>
+              <dt>{cardLanguage === 'fr' ? 'Matricule :' : 'Student ID:'}</dt><dd className="truncate">{student.official_matricule ?? student.admission_number}</dd>
+              <dt>{cardLanguage === 'fr' ? 'Année scolaire :' : 'Academic year:'}</dt><dd>{student.academic_year?.title ?? '—'}</dd>
+            </dl>
+          </div>
+          <p className="mt-3 text-center text-xs text-secondary-500">
+            {cardLanguage === 'fr'
+              ? 'Le PDF utilise automatiquement l’en-tête officiel enregistré dans les paramètres de l’école.'
+              : 'The PDF automatically uses the official header saved in the school settings.'}
+          </p>
         </CardContent>
       </Card>
 

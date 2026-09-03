@@ -69,6 +69,10 @@ export const studentsApi = {
     const { data } = await apiClient.delete<ApiResponse<Student>>(`/students/${id}/photo`);
     return unwrap(data);
   },
+  async downloadIdCard(id: string): Promise<Blob> {
+    const response = await apiClient.get(`/reports/students/${id}/id-card`, { responseType: 'blob' });
+    return new Blob([response.data], { type: 'application/pdf' });
+  },
   async statistics(): Promise<StudentStatistics> {
     const { data } = await apiClient.get<ApiResponse<StudentStatistics>>('/students/statistics');
     return unwrap(data);

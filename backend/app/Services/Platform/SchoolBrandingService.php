@@ -27,6 +27,7 @@ final class SchoolBrandingService
         $column = match ($kind) {
             'secondary' => 'secondary_logo',
             'document_header' => 'document_header_image',
+            'student_id_stamp' => 'student_id_card_stamp',
             default => 'logo',
         };
         $oldPath = $school->getAttribute($column);

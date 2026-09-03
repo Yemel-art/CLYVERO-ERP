@@ -38,6 +38,8 @@ final class SettingsController extends ApiController
                 'secondary_logo_url' => $school->secondary_logo_url ?? null,
                 'document_header_image_url' => $school->document_header_image_url ?? null,
                 'document_header_image_settings' => $school->documentHeaderImageSettings(),
+                'student_id_card_settings' => $school->studentIdCardSettings(),
+                'student_id_card_stamp_url' => $school->student_id_card_stamp_url ?? null,
                 'currency' => $school->currency ?? 'XAF',
                 'default_locale' => $school->default_locale ?? 'fr',
                 'report_card_remarks' => $school->report_card_remarks,
@@ -100,6 +102,29 @@ final class SettingsController extends ApiController
             'document_header_image_settings.width' => ['required_with:document_header_image_settings', 'integer', 'min:30', 'max:100'],
             'document_header_image_settings.max_height' => ['required_with:document_header_image_settings', 'integer', 'min:40', 'max:200'],
             'document_header_image_settings.alignment' => ['required_with:document_header_image_settings', Rule::in(['left', 'center', 'right'])],
+            'student_id_card_settings' => ['sometimes', 'array'],
+            'student_id_card_settings.background_color' => ['required_with:student_id_card_settings', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'student_id_card_settings.border_color' => ['required_with:student_id_card_settings', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'student_id_card_settings.accent_color' => ['required_with:student_id_card_settings', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'student_id_card_settings.text_color' => ['required_with:student_id_card_settings', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'student_id_card_settings.border_width' => ['required_with:student_id_card_settings', 'integer', 'min:1', 'max:4'],
+            'student_id_card_settings.corner_style' => ['required_with:student_id_card_settings', Rule::in(['square', 'soft', 'rounded'])],
+            'student_id_card_settings.spacing' => ['required_with:student_id_card_settings', Rule::in(['compact', 'standard'])],
+            'student_id_card_settings.header_height' => ['required_with:student_id_card_settings', 'integer', 'min:13', 'max:20'],
+            'student_id_card_settings.header_image_width' => ['required_with:student_id_card_settings', 'integer', 'min:50', 'max:100'],
+            'student_id_card_settings.year_gap' => ['required_with:student_id_card_settings', 'integer', 'min:0', 'max:4'],
+            'student_id_card_settings.font_scale' => ['required_with:student_id_card_settings', 'integer', 'min:85', 'max:115'],
+            'student_id_card_settings.photo_size' => ['required_with:student_id_card_settings', Rule::in(['small', 'standard', 'large'])],
+            'student_id_card_settings.show_title' => ['required_with:student_id_card_settings', 'boolean'],
+            'student_id_card_settings.title_fr' => ['required_with:student_id_card_settings', 'string', 'max:60'],
+            'student_id_card_settings.title_en' => ['required_with:student_id_card_settings', 'string', 'max:60'],
+            'student_id_card_settings.show_motto' => ['required_with:student_id_card_settings', 'boolean'],
+            'student_id_card_settings.show_cameroon_flag' => ['required_with:student_id_card_settings', 'boolean'],
+            'student_id_card_settings.flag_size' => ['required_with:student_id_card_settings', 'integer', 'min:6', 'max:16'],
+            'student_id_card_settings.show_stamp' => ['required_with:student_id_card_settings', 'boolean'],
+            'student_id_card_settings.stamp_label' => ['required_with:student_id_card_settings', 'string', 'max:40'],
+            'student_id_card_settings.show_signature' => ['required_with:student_id_card_settings', 'boolean'],
+            'student_id_card_settings.signature_label' => ['required_with:student_id_card_settings', 'string', 'max:40'],
             'document_footer' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'principal_name' => ['sometimes', 'nullable', 'string', 'max:160'],
             'principal_title' => ['sometimes', 'nullable', 'string', 'max:120'],
@@ -122,6 +147,7 @@ final class SettingsController extends ApiController
             'secondary_color' => $validated['secondary_color'] ?? $school->secondary_color,
             'document_header' => $validated['document_header'] ?? $school->document_header,
             'document_header_image_settings' => $validated['document_header_image_settings'] ?? $school->document_header_image_settings,
+            'student_id_card_settings' => $validated['student_id_card_settings'] ?? $school->student_id_card_settings,
             'document_footer' => $validated['document_footer'] ?? $school->document_footer,
             'principal_name' => $validated['principal_name'] ?? $school->principal_name,
             'principal_title' => $validated['principal_title'] ?? $school->principal_title,
@@ -141,6 +167,8 @@ final class SettingsController extends ApiController
             'secondary_logo_url' => $school->secondary_logo_url ?? null,
             'document_header_image_url' => $school->document_header_image_url ?? null,
             'document_header_image_settings' => $school->documentHeaderImageSettings(),
+            'student_id_card_settings' => $school->studentIdCardSettings(),
+            'student_id_card_stamp_url' => $school->student_id_card_stamp_url ?? null,
             'currency' => $school->currency ?? 'XAF',
             'default_locale' => $school->default_locale ?? 'fr',
             'report_card_remarks' => $school->report_card_remarks,
@@ -160,7 +188,7 @@ final class SettingsController extends ApiController
         abort_unless($request->user()?->hasPermission('settings.edit'), 403);
         $validated = $request->validate([
             'logo' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
-            'kind' => ['sometimes', Rule::in(['primary', 'secondary', 'document_header'])],
+            'kind' => ['sometimes', Rule::in(['primary', 'secondary', 'document_header', 'student_id_stamp'])],
         ]);
         $school = $this->schoolFor($request);
         $kind = $validated['kind'] ?? 'primary';
@@ -170,6 +198,7 @@ final class SettingsController extends ApiController
             'secondary_logo_url' => $fresh->secondary_logo_url,
             'document_header_image_url' => $fresh->document_header_image_url,
             'document_header_image_settings' => $fresh->documentHeaderImageSettings(),
+            'student_id_card_stamp_url' => $fresh->student_id_card_stamp_url,
         ], 'School logo updated.');
     }
 

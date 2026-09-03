@@ -85,6 +85,9 @@ class ReportCardService
                 'footer' => $school?->document_footer,
                 'principal_name' => $school?->principal_name,
                 'principal_title' => $school?->principal_title,
+                'stamp_url' => $school?->student_id_card_stamp && Storage::disk('public')->exists($school->student_id_card_stamp)
+                    ? Storage::disk('public')->path($school->student_id_card_stamp)
+                    : null,
             ],
             'language' => $language,
             'labels' => $this->labels($language),
@@ -130,7 +133,7 @@ class ReportCardService
     public function downloadPdf(Student $student, Term $term): Response
     {
         $data = $this->buildData($student, $term);
-        $pdf = Pdf::loadView('reports.report-card', $data)->setPaper('a4');
+        $pdf = Pdf::loadView('reports.report-card-compact', $data)->setPaper('a4');
         $filename = sprintf(
             'report-card_%s_%s.pdf',
             preg_replace('/\W+/', '-', strtolower($student->full_name)),
@@ -143,7 +146,7 @@ class ReportCardService
     public function streamPdf(Student $student, Term $term): Response
     {
         $data = $this->buildData($student, $term);
-        $pdf = Pdf::loadView('reports.report-card', $data)->setPaper('a4');
+        $pdf = Pdf::loadView('reports.report-card-compact', $data)->setPaper('a4');
 
         return $pdf->stream("report-{$student->admission_number}.pdf");
     }

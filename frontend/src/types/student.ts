@@ -76,6 +76,8 @@ export interface Student {
     id: string;
     name: string;
     grade_level: string;
+    language: 'fr' | 'en';
+    identity_label: string;
   } | null;
   academic_year_id: string | null;
   enrollment_date: string;

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('reports')->group(function (): void {
     Route::get('/certificates/teachers/{teacher}/employment', [CertificateController::class, 'employment']);
     Route::get('/certificates/students/{student}/school', [CertificateController::class, 'school']);
+    Route::get('/students/{student}/id-card', [CertificateController::class, 'studentIdCard']);
     Route::get('/honor-roll', [SchoolHonorRollController::class, 'data']);
     Route::get('/honor-roll/download', [SchoolHonorRollController::class, 'download']);
     Route::get('/students/{studentId}/terms/{termId}/data',     [ReportCardController::class, 'data'])

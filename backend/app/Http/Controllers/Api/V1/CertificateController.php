@@ -37,4 +37,11 @@ final class CertificateController extends ApiController
             $request->string('language', 'fr')->toString(),
         );
     }
+
+    public function studentIdCard(GenerateCertificateRequest $request, Student $student): Response
+    {
+        $this->authorize('view', $student);
+
+        return $this->certificates->studentIdCard($student);
+    }
 }

@@ -14,6 +14,8 @@ export interface SchoolSettings {
   secondary_logo_url: string | null;
   document_header_image_url: string | null;
   document_header_image_settings: DocumentHeaderImageSettings;
+  student_id_card_settings: StudentIdCardSettings;
+  student_id_card_stamp_url: string | null;
   currency: string;
   default_locale: 'fr' | 'en';
   report_card_remarks: PerformanceRemark[] | null;
@@ -32,6 +34,31 @@ export interface DocumentHeaderImageSettings {
   width: number;
   max_height: number;
   alignment: 'left' | 'center' | 'right';
+}
+
+export interface StudentIdCardSettings {
+  background_color: string;
+  border_color: string;
+  accent_color: string;
+  text_color: string;
+  border_width: number;
+  corner_style: 'square' | 'soft' | 'rounded';
+  spacing: 'compact' | 'standard';
+  header_height: number;
+  header_image_width: number;
+  year_gap: number;
+  font_scale: number;
+  photo_size: 'small' | 'standard' | 'large';
+  show_title: boolean;
+  title_fr: string;
+  title_en: string;
+  show_motto: boolean;
+  show_cameroon_flag: boolean;
+  flag_size: number;
+  show_stamp: boolean;
+  stamp_label: string;
+  show_signature: boolean;
+  signature_label: string;
 }
 
 export interface PerformanceRemark {
@@ -102,9 +129,9 @@ export const adminApi = {
     const { data } = await apiClient.patch<ApiResponse<SchoolSettings>>('/settings', payload);
     return unwrap(data);
   },
-  async uploadSchoolLogo(file: File, kind: 'primary' | 'secondary' | 'document_header' = 'primary') {
+  async uploadSchoolLogo(file: File, kind: 'primary' | 'secondary' | 'document_header' | 'student_id_stamp' = 'primary') {
     const body = new FormData(); body.append('logo', file); body.append('kind', kind);
-    const { data } = await apiClient.post<ApiResponse<{ logo_url: string | null; secondary_logo_url: string | null; document_header_image_url: string | null }>>('/settings/logo', body);
+    const { data } = await apiClient.post<ApiResponse<{ logo_url: string | null; secondary_logo_url: string | null; document_header_image_url: string | null; student_id_card_stamp_url: string | null }>>('/settings/logo', body);
     return unwrap(data);
   },
 

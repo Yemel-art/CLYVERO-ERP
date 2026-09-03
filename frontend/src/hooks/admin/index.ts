@@ -27,7 +27,7 @@ export function useUpdateSchool() {
 export function useUploadSchoolLogo() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ file, kind }: { file: File; kind: 'primary' | 'secondary' | 'document_header' }) =>
+    mutationFn: ({ file, kind }: { file: File; kind: 'primary' | 'secondary' | 'document_header' | 'student_id_stamp' }) =>
       adminApi.uploadSchoolLogo(file, kind),
     onSuccess: (logos) => {
       const current = useAuthStore.getState().user;

@@ -108,6 +108,29 @@ class SchoolClass extends Model
         return 'first_cycle';
     }
 
+    /**
+     * A compact, single-language label suitable for identity cards and official lists.
+     * It deliberately avoids the bilingual class name stored for administrative screens.
+     */
+    public function identityLabel(): string
+    {
+        $level = trim((string) $this->grade_level);
+        $speciality = trim((string) $this->speciality);
+
+        if ($speciality === '') {
+            return $level !== '' ? $level : trim((string) $this->name);
+        }
+
+        $definition = config("student.specialities.{$speciality}")
+            ?? config("student.general_streams.{$speciality}");
+        $nameKey = $this->language === 'en' ? 'name_en' : 'name';
+        $specialityName = is_array($definition)
+            ? (string) ($definition[$nameKey] ?? $definition['name'] ?? $speciality)
+            : $speciality;
+
+        return trim($level.' '.$specialityName);
+    }
+
     public function academicYear(): BelongsTo { return $this->belongsTo(AcademicYear::class); }
     public function formMaster(): BelongsTo { return $this->belongsTo(Teacher::class, 'form_master_id'); }
     public function students(): HasMany { return $this->hasMany(Student::class, 'class_id'); }

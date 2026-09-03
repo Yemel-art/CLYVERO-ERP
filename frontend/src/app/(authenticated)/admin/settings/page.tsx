@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useSettings, useUpdateSchool, useUploadSchoolLogo } from '@/hooks/admin';
-import type { DocumentHeaderImageSettings, HonorRollRule, PerformanceRemark } from '@/lib/api/admin';
+import type { DocumentHeaderImageSettings, HonorRollRule, PerformanceRemark, StudentIdCardSettings } from '@/lib/api/admin';
 
 const defaultRemarks: PerformanceRemark[] = [
   { minimum: 16, fr: 'Excellent', en: 'Excellent' },
@@ -33,6 +33,15 @@ const defaultHeaderImageSettings: DocumentHeaderImageSettings = {
   mode: 'fit', width: 100, max_height: 105, alignment: 'center',
 };
 
+const defaultStudentIdCardSettings: StudentIdCardSettings = {
+  background_color: '#FFFFFF', border_color: '#1D4ED8', accent_color: '#1D4ED8',
+  text_color: '#111827', border_width: 3, corner_style: 'soft', spacing: 'standard',
+  header_height: 16, header_image_width: 100, year_gap: 1, font_scale: 100, photo_size: 'standard',
+  show_title: true, title_fr: 'Carte d’identité scolaire', title_en: 'Student Identity Card',
+  show_motto: true, show_cameroon_flag: true, flag_size: 10,
+  show_stamp: true, stamp_label: 'School stamp', show_signature: true, signature_label: 'Authorized signature',
+};
+
 export default function SettingsPage() {
   const { data, isLoading } = useSettings();
   const update = useUpdateSchool();
@@ -52,6 +61,7 @@ export default function SettingsPage() {
   const [secondaryColor, setSecondaryColor] = useState('#0F766E');
   const [documentHeader, setDocumentHeader] = useState('');
   const [headerImageSettings, setHeaderImageSettings] = useState<DocumentHeaderImageSettings>(defaultHeaderImageSettings);
+  const [studentIdCardSettings, setStudentIdCardSettings] = useState<StudentIdCardSettings>(defaultStudentIdCardSettings);
   const [documentFooter, setDocumentFooter] = useState('');
   const [principalName, setPrincipalName] = useState('');
   const [principalTitle, setPrincipalTitle] = useState('');
@@ -72,6 +82,7 @@ export default function SettingsPage() {
     setSecondaryColor(data.school.secondary_color ?? '#0F766E');
     setDocumentHeader(data.school.document_header ?? '');
     setHeaderImageSettings(data.school.document_header_image_settings ?? defaultHeaderImageSettings);
+    setStudentIdCardSettings(data.school.student_id_card_settings ?? defaultStudentIdCardSettings);
     setDocumentFooter(data.school.document_footer ?? '');
     setPrincipalName(data.school.principal_name ?? '');
     setPrincipalTitle(data.school.principal_title ?? '');
@@ -94,6 +105,7 @@ export default function SettingsPage() {
         secondary_color: secondaryColor,
         document_header: documentHeader,
         document_header_image_settings: headerImageSettings,
+        student_id_card_settings: studentIdCardSettings,
         document_footer: documentFooter,
         principal_name: principalName,
         principal_title: principalTitle,
@@ -104,11 +116,11 @@ export default function SettingsPage() {
     }
   };
 
-  const onLogoSelected = async (kind: 'primary' | 'secondary' | 'document_header', file?: File) => {
+  const onLogoSelected = async (kind: 'primary' | 'secondary' | 'document_header' | 'student_id_stamp', file?: File) => {
     if (!file) return;
     try {
       await uploadLogo.mutateAsync({ file, kind });
-      toast.success(kind === 'document_header'
+      toast.success(kind === 'student_id_stamp' ? 'Student ID stamp image updated.' : kind === 'document_header'
         ? 'Official document header image updated.'
         : kind === 'primary' ? 'Primary school logo updated.' : 'Secondary school logo updated.');
     } catch {
@@ -227,6 +239,103 @@ export default function SettingsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <Input type="color" label="Primary document color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} />
                   <Input type="color" label="Secondary document color" value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} />
+                </div>
+                <div className="rounded-card border-2 border-secondary-200 bg-secondary-50/50 p-4">
+                  <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-secondary-900">Student ID card design</p>
+                      <p className="mt-1 text-xs text-secondary-600">Customize every student card generated for this school. The fixed information grid remains protected so cards always print correctly.</p>
+                    </div>
+                    <Button type="button" variant="outline" onClick={() => setStudentIdCardSettings({ ...defaultStudentIdCardSettings, border_color: primaryColor, accent_color: primaryColor })}>Restore professional default</Button>
+                  </div>
+
+                  <div
+                    className="relative mx-auto mb-5 aspect-[1.586/1] w-full max-w-md overflow-hidden border bg-white p-3 shadow-sm"
+                    style={{
+                      backgroundColor: studentIdCardSettings.background_color,
+                      borderColor: studentIdCardSettings.border_color,
+                      color: studentIdCardSettings.text_color,
+                      borderWidth: `${studentIdCardSettings.border_width + 1}px`,
+                      borderRadius: studentIdCardSettings.corner_style === 'square' ? 0 : studentIdCardSettings.corner_style === 'rounded' ? 18 : 7,
+                      fontSize: `${studentIdCardSettings.font_scale}%`,
+                    }}
+                  >
+                    {studentIdCardSettings.show_cameroon_flag && <div className="absolute -left-6 top-2 flex h-3 w-20 -rotate-45 overflow-hidden" style={{ transform: `rotate(-45deg) scale(${studentIdCardSettings.flag_size / 10})` }}><span className="flex-1 bg-green-600" /><span className="flex-1 bg-red-600" /><span className="flex-1 bg-yellow-400" /></div>}
+                    <div className="border-b pb-2 text-center" style={{ borderColor: studentIdCardSettings.border_color, minHeight: `${studentIdCardSettings.header_height * 2}px` }}>
+                      <p className="text-[9px] font-semibold uppercase">{name || 'School name'}</p>
+                      {studentIdCardSettings.show_motto && motto && <p className="text-[8px]">{motto}</p>}
+                      {studentIdCardSettings.show_title && <p className="text-xs font-black uppercase" style={{ color: studentIdCardSettings.accent_color }}>{defaultLocale === 'fr' ? studentIdCardSettings.title_fr : studentIdCardSettings.title_en}</p>}
+                    </div>
+                    <div className={`grid grid-cols-[78px_1fr] gap-3 ${studentIdCardSettings.spacing === 'compact' ? 'py-2' : 'py-3'}`}>
+                      <div>
+                        <div className="flex h-20 items-center justify-center border bg-secondary-100 text-xs" style={{ borderColor: studentIdCardSettings.border_color }}>PHOTO</div>
+                        <div className="mt-1 truncate px-1 py-0.5 text-center text-[8px] font-bold text-white" style={{ backgroundColor: studentIdCardSettings.accent_color }}>MAT. XXXXXXXX</div>
+                      </div>
+                      <div className="grid grid-cols-[72px_1fr] content-start gap-x-2 gap-y-0.5 text-[9px]">
+                        <span>Name:</span><strong>STUDENT NAME</strong>
+                        <span>Born on:</span><strong>01-01-2010</strong>
+                        <span>Gender / Age:</span><strong>M / 16</strong>
+                        <span className="border-l-2 bg-secondary-100 px-1" style={{ borderColor: studentIdCardSettings.accent_color }}>Class:</span><strong className="bg-secondary-100 px-1" style={{ color: studentIdCardSettings.accent_color }}>Form 2 Electrical Engineering</strong>
+                      </div>
+                    </div>
+                    <div className="absolute bottom-2 right-3 flex items-end gap-3 text-[7px]">
+                      {studentIdCardSettings.show_signature && <span className="border-t border-current px-2 pt-0.5">{studentIdCardSettings.signature_label}</span>}
+                      {studentIdCardSettings.show_stamp && <span className="flex h-9 w-9 items-center justify-center rounded-full border text-center" style={{ borderColor: studentIdCardSettings.accent_color, color: studentIdCardSettings.accent_color }}>{data?.school?.student_id_card_stamp_url ? 'STAMP' : studentIdCardSettings.stamp_label}</span>}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <Input type="color" label="Card background" value={studentIdCardSettings.background_color} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, background_color: event.target.value }))} />
+                    <Input type="color" label="Border color" value={studentIdCardSettings.border_color} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, border_color: event.target.value }))} />
+                    <Input type="color" label="Accent color" value={studentIdCardSettings.accent_color} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, accent_color: event.target.value }))} />
+                    <Input type="color" label="Text color" value={studentIdCardSettings.text_color} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, text_color: event.target.value }))} />
+                  </div>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                    <label className="text-sm font-medium text-secondary-700">Border thickness
+                      <select className="mt-1 h-10 w-full rounded-input border border-secondary-300 bg-surface px-3" value={studentIdCardSettings.border_width} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, border_width: Number(event.target.value) }))}>
+                        <option value={1}>Thin</option><option value={2}>Medium</option><option value={3}>Thick</option><option value={4}>Extra thick</option>
+                      </select>
+                    </label>
+                    <label className="text-sm font-medium text-secondary-700">Corner style
+                      <select className="mt-1 h-10 w-full rounded-input border border-secondary-300 bg-surface px-3" value={studentIdCardSettings.corner_style} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, corner_style: event.target.value as StudentIdCardSettings['corner_style'] }))}>
+                        <option value="square">Square</option><option value="soft">Soft corners</option><option value="rounded">Rounded</option>
+                      </select>
+                    </label>
+                    <label className="text-sm font-medium text-secondary-700">Information spacing
+                      <select className="mt-1 h-10 w-full rounded-input border border-secondary-300 bg-surface px-3" value={studentIdCardSettings.spacing} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, spacing: event.target.value as StudentIdCardSettings['spacing'] }))}>
+                        <option value="standard">Standard</option><option value="compact">Compact</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <label className="text-sm font-medium text-secondary-700">Header height: {studentIdCardSettings.header_height} mm<input type="range" min="13" max="20" value={studentIdCardSettings.header_height} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, header_height: Number(event.target.value) }))} className="mt-2 w-full" /></label>
+                    <label className="text-sm font-medium text-secondary-700">Header image width: {studentIdCardSettings.header_image_width}%<input type="range" min="50" max="100" value={studentIdCardSettings.header_image_width} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, header_image_width: Number(event.target.value) }))} className="mt-2 w-full" /></label>
+                    <label className="text-sm font-medium text-secondary-700">Space below header: {studentIdCardSettings.year_gap} mm<input type="range" min="0" max="4" value={studentIdCardSettings.year_gap} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, year_gap: Number(event.target.value) }))} className="mt-2 w-full" /></label>
+                    <label className="text-sm font-medium text-secondary-700">Text size: {studentIdCardSettings.font_scale}%<input type="range" min="85" max="115" value={studentIdCardSettings.font_scale} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, font_scale: Number(event.target.value) }))} className="mt-2 w-full" /></label>
+                    <label className="text-sm font-medium text-secondary-700">Photo size<select className="mt-1 h-10 w-full rounded-input border border-secondary-300 bg-surface px-3" value={studentIdCardSettings.photo_size} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, photo_size: event.target.value as StudentIdCardSettings['photo_size'] }))}><option value="small">Small</option><option value="standard">Standard</option><option value="large">Large</option></select></label>
+                  </div>
+                  <div className="mt-4 grid gap-3 rounded border border-secondary-200 bg-white p-3 sm:grid-cols-2">
+                    {([
+                      ['show_title', 'Show card title'], ['show_motto', 'Show school motto'],
+                      ['show_cameroon_flag', 'Show Cameroon corner flag'], ['show_stamp', 'Show school stamp area'],
+                      ['show_signature', 'Show authorized signature area'],
+                    ] as const).map(([key, label]) => <label key={key} className="flex items-center gap-2 text-sm text-secondary-700"><input type="checkbox" checked={studentIdCardSettings[key]} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, [key]: event.target.checked }))} />{label}</label>)}
+                  </div>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <Input label="French card title" value={studentIdCardSettings.title_fr} disabled={!studentIdCardSettings.show_title} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, title_fr: event.target.value }))} />
+                    <Input label="English card title" value={studentIdCardSettings.title_en} disabled={!studentIdCardSettings.show_title} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, title_en: event.target.value }))} />
+                    <Input label="Stamp label" value={studentIdCardSettings.stamp_label} disabled={!studentIdCardSettings.show_stamp} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, stamp_label: event.target.value }))} />
+                    <Input label="Signature label" value={studentIdCardSettings.signature_label} disabled={!studentIdCardSettings.show_signature} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, signature_label: event.target.value }))} />
+                  </div>
+                  <div className="mt-4 rounded border border-secondary-200 bg-white p-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      {data?.school?.student_id_card_stamp_url && <img src={data.school.student_id_card_stamp_url} alt="School stamp" className="h-16 w-16 object-contain" />}
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-button border border-secondary-300 px-3 py-2 text-sm font-medium hover:bg-secondary-50"><Upload className="h-4 w-4" />{uploadLogo.isPending ? 'Uploading…' : 'Upload school stamp'}<input type="file" className="sr-only" accept="image/jpeg,image/png,image/webp" disabled={uploadLogo.isPending} onChange={(event) => { void onLogoSelected('student_id_stamp', event.target.files?.[0]); event.currentTarget.value = ''; }} /></label>
+                    </div>
+                    <p className="mt-2 text-xs text-secondary-500">A transparent PNG of the official stamp gives the best result.</p>
+                  </div>
+                  {studentIdCardSettings.show_cameroon_flag && <label className="mt-4 block text-sm font-medium text-secondary-700">Cameroon flag size: {studentIdCardSettings.flag_size} mm<input type="range" min="6" max="16" value={studentIdCardSettings.flag_size} onChange={(event) => setStudentIdCardSettings((current) => ({ ...current, flag_size: Number(event.target.value) }))} className="mt-2 w-full" /></label>}
+                  <p className="mt-3 text-xs text-secondary-500">Use “Save changes” below to apply this design to all future student ID downloads for this school.</p>
                 </div>
                 <Input label="Principal name" value={principalName} onChange={(e) => setPrincipalName(e.target.value)} />
                 <Input label="Principal title" value={principalTitle} onChange={(e) => setPrincipalTitle(e.target.value)} placeholder="Principal / Head of school" />

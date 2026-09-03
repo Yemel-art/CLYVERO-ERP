@@ -58,6 +58,8 @@ class StudentResource extends JsonResource
                 'id' => $this->schoolClass->id,
                 'name' => $this->schoolClass->name,
                 'grade_level' => $this->schoolClass->grade_level,
+                'language' => $this->schoolClass->language,
+                'identity_label' => $this->schoolClass->identityLabel(),
             ] : null),
             'academic_year_id' => $this->academic_year_id,
             'enrollment_date' => $this->enrollment_date->toDateString(),
