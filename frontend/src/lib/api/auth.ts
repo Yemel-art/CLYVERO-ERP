@@ -57,8 +57,12 @@ export const authApi = {
     });
   },
 
-  async forgotPassword(email: string, schoolSlug?: string): Promise<void> {
-    await apiClient.post<ApiResponse<null>>('/forgot-password', { email, school_slug: schoolSlug || undefined });
+  async forgotPassword(email: string, schoolSlug?: string, accountScope: 'school' | 'platform' = 'school'): Promise<void> {
+    await apiClient.post<ApiResponse<null>>('/forgot-password', {
+      email,
+      school_slug: accountScope === 'school' ? schoolSlug || undefined : undefined,
+      account_scope: accountScope,
+    });
   },
 
   async resetPassword(input: {
@@ -67,6 +71,7 @@ export const authApi = {
     password: string;
     passwordConfirmation: string;
     schoolSlug?: string;
+    accountScope?: 'school' | 'platform';
   }): Promise<void> {
     await apiClient.post<ApiResponse<null>>('/reset-password', {
       token: input.token,
@@ -74,6 +79,7 @@ export const authApi = {
       password: input.password,
       password_confirmation: input.passwordConfirmation,
       school_slug: input.schoolSlug || undefined,
+      account_scope: input.accountScope ?? 'school',
     });
   },
 

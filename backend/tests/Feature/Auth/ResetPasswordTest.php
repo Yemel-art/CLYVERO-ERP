@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\UserRole;
+use App\Models\Role;
 use App\Models\User;
 use App\Notifications\TenantPasswordResetNotification;
 use Database\Seeders\PermissionSeeder;
@@ -62,6 +64,38 @@ final class ResetPasswordTest extends TestCase
         ])->assertOk();
 
         $this->assertSame(0, $user->fresh()->tokens()->count());
+    }
+
+    public function test_platform_owner_can_reset_without_school_and_returns_a_one_time_token(): void
+    {
+        Notification::fake();
+        $role = Role::query()->where('name', UserRole::SuperAdministrator->value)->firstOrFail();
+        $owner = User::factory()->create([
+            'school_id' => null,
+            'role_id' => $role->id,
+            'email' => 'platform-reset@example.test',
+            'password' => Hash::make('OldOwnerPassword2026!'),
+        ]);
+
+        $this->postJson('/api/v1/forgot-password', [
+            'email' => $owner->email,
+            'account_scope' => 'platform',
+        ])->assertOk();
+
+        /** @var TenantPasswordResetNotification $notification */
+        $notification = Notification::sent($owner, TenantPasswordResetNotification::class)->last();
+        parse_str((string) parse_url($notification->toMail($owner)->actionUrl, PHP_URL_QUERY), $query);
+        $payload = [
+            'token' => (string) ($query['token'] ?? ''),
+            'email' => $owner->email,
+            'account_scope' => 'platform',
+            'password' => 'NewOwnerPassword2026!',
+            'password_confirmation' => 'NewOwnerPassword2026!',
+        ];
+
+        $this->postJson('/api/v1/reset-password', $payload)->assertOk();
+        $this->assertTrue(Hash::check('NewOwnerPassword2026!', $owner->fresh()->password));
+        $this->postJson('/api/v1/reset-password', $payload)->assertUnprocessable();
     }
 
     public function test_invalid_token_is_rejected(): void

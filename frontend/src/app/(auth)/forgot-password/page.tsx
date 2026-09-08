@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { Suspense, useCallback, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,12 +17,15 @@ import type { ApiError } from '@/types/api';
 
 type Values = { email: string; school_slug?: string };
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordForm() {
   const { language } = useTranslation();
   const ui = useCallback(
     (french: string, english: string) => language === 'fr' ? french : english,
     [language],
   );
+  const search = useSearchParams();
+  const isPlatformReset = search.get('scope') === 'platform';
+  const loginHref = isPlatformReset ? '/owner/login' : '/login';
   const schema = useMemo(() => z.object({
     email: z.string()
       .min(1, ui('Veuillez saisir votre adresse e-mail.', 'Please enter your email.'))
@@ -43,7 +47,7 @@ export default function ForgotPasswordPage() {
   const onSubmit = async ({ email, school_slug }: Values) => {
     setServerError(null);
     try {
-      await authApi.forgotPassword(email, school_slug);
+      await authApi.forgotPassword(email, school_slug, isPlatformReset ? 'platform' : 'school');
       // The backend returns the same success response for known and unknown
       // accounts, preventing account enumeration.
       setSubmitted(true);
@@ -68,7 +72,7 @@ export default function ForgotPasswordPage() {
             )}
           </p>
           <Link
-            href="/login"
+            href={loginHref}
             className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-700"
           >
             <ArrowLeft className="h-4 w-4" /> {ui('Retour à la connexion', 'Back to sign in')}
@@ -104,19 +108,21 @@ export default function ForgotPasswordPage() {
             required
             {...register('email')}
           />
-          <Input
-            label={ui('Code de l’établissement', 'School code')}
-            placeholder="e.g. your-school"
-            leftIcon={<School className="h-4 w-4" />}
-            hint={ui('Optionnel si votre adresse e-mail est unique.', 'Optional when your email is unique.')}
-            error={errors.school_slug?.message}
-            {...register('school_slug')}
-          />
+          {!isPlatformReset && (
+            <Input
+              label={ui('Code de l’établissement', 'School code')}
+              placeholder="e.g. your-school"
+              leftIcon={<School className="h-4 w-4" />}
+              hint={ui('Optionnel si votre adresse e-mail est unique.', 'Optional when your email is unique.')}
+              error={errors.school_slug?.message}
+              {...register('school_slug')}
+            />
+          )}
           <Button type="submit" fullWidth size="lg" isLoading={isSubmitting}>
             {ui('Envoyer le lien', 'Send reset link')}
           </Button>
           <Link
-            href="/login"
+            href={loginHref}
             className="flex items-center justify-center gap-1.5 text-sm font-medium text-secondary-600 hover:text-primary-600"
           >
             <ArrowLeft className="h-4 w-4" /> {ui('Retour à la connexion', 'Back to sign in')}
@@ -124,5 +130,13 @@ export default function ForgotPasswordPage() {
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={<Card><CardContent className="h-64 animate-pulse bg-secondary-50" /></Card>}>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }

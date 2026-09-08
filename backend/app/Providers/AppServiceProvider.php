@@ -53,6 +53,7 @@ class AppServiceProvider extends ServiceProvider
                 'token' => $token,
                 'email' => $user->email,
                 'school' => $user->school?->slug,
+                'scope' => $user->isSuperAdministrator() && $user->school_id === null ? 'platform' : 'school',
             ]);
         });
         ResetPassword::toMailUsing(function (User $user, string $token): MailMessage {
@@ -61,6 +62,7 @@ class AppServiceProvider extends ServiceProvider
                 'token' => $token,
                 'email' => $user->email,
                 'school' => $user->school?->slug,
+                'scope' => $user->isSuperAdministrator() && $user->school_id === null ? 'platform' : 'school',
             ]);
             $minutes = (int) config('auth.passwords.users.expire', 30);
 

@@ -171,6 +171,7 @@ final class AuthController extends ApiController
         $this->auth->sendPasswordResetLink(
             email:     $request->string('email')->toString(),
             schoolSlug: $request->string('school_slug')->toString() ?: null,
+            accountScope: $request->string('account_scope')->toString() ?: 'school',
             ip:        $request->ip() ?? '0.0.0.0',
             userAgent: $request->userAgent(),
         );
@@ -186,6 +187,7 @@ final class AuthController extends ApiController
         $status = $this->auth->resetPassword(
             email:     $request->string('email')->toString(),
             schoolSlug: $request->string('school_slug')->toString() ?: null,
+            accountScope: $request->string('account_scope')->toString() ?: 'school',
             password:  $request->string('password')->toString(),
             token:     $request->string('token')->toString(),
             ip:        $request->ip() ?? '0.0.0.0',

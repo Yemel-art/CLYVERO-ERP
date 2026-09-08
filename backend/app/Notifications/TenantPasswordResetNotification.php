@@ -23,10 +23,12 @@ final class TenantPasswordResetNotification extends Notification
         /** @var User $notifiable */
         $notifiable->loadMissing('school');
         $locale = $notifiable->school?->default_locale ?? config('app.locale', 'fr');
+        $isPlatformOwner = $notifiable->isSuperAdministrator() && $notifiable->school_id === null;
         $url = rtrim((string) config('app.frontend_url'), '/').'/reset-password?'.http_build_query([
             'token' => $this->plainToken,
             'email' => $notifiable->email,
             'school' => $notifiable->school?->school_code,
+            'scope' => $isPlatformOwner ? 'platform' : 'school',
         ]);
         $minutes = (int) config('auth.passwords.users.expire', 30);
 

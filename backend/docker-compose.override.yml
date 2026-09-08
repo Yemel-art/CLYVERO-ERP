@@ -33,6 +33,8 @@ services:
       - 8.8.8.8
     depends_on:
       - laravel.test
+    networks:
+      - sail
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/login"]
       interval: 5s

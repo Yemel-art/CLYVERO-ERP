@@ -296,7 +296,7 @@ function LoginForm() {
               />
               {ui('Se souvenir de moi', 'Remember me')}
             </label>
-            <Link href="/forgot-password" className="font-medium text-primary-600 hover:text-primary-700">
+            <Link href={isPlatformAccess ? '/forgot-password?scope=platform' : '/forgot-password'} className="font-medium text-primary-600 hover:text-primary-700">
               {ui('Mot de passe oublié ?', 'Forgot password?')}
             </Link>
           </div>

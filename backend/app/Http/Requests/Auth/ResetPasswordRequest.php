@@ -6,6 +6,7 @@ namespace App\Http\Requests\Auth;
 
 use App\Rules\StrongPassword;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class ResetPasswordRequest extends FormRequest
 {
@@ -17,6 +18,7 @@ class ResetPasswordRequest extends FormRequest
             'token' => ['required', 'string', 'size:64'],
             'email' => ['required', 'email', 'max:255'],
             'school_slug' => ['nullable', 'string', 'max:120', 'regex:/^[A-Za-z0-9-]+$/'],
+            'account_scope' => ['nullable', Rule::in(['school', 'platform'])],
             'password' => ['required', 'string', 'confirmed', new StrongPassword()],
             'password_confirmation' => ['required', 'string'],
         ];

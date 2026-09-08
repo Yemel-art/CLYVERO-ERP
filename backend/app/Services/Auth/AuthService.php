@@ -6,6 +6,7 @@ namespace App\Services\Auth;
 
 use App\DTO\Auth\LoginDTO;
 use App\Enums\AuditAction;
+use App\Enums\UserRole;
 use App\Exceptions\AccountInactiveException;
 use App\Exceptions\AccountLockedException;
 use App\Exceptions\InvalidCredentialsException;
@@ -183,9 +184,15 @@ class AuthService extends BaseService
      *
      * Always returns a uniform status string to prevent user enumeration.
      */
-    public function sendPasswordResetLink(string $email, ?string $schoolSlug, string $ip, ?string $userAgent): string
+    public function sendPasswordResetLink(
+        string $email,
+        ?string $schoolSlug,
+        string $accountScope,
+        string $ip,
+        ?string $userAgent,
+    ): string
     {
-        $user = $this->users->findByEmail($email, $schoolSlug);
+        $user = $this->findPasswordResetUser($email, $schoolSlug, $accountScope);
         if ($user === null) {
             return Password::RESET_LINK_SENT;
         }
@@ -202,12 +209,13 @@ class AuthService extends BaseService
     public function resetPassword(
         string $email,
         ?string $schoolSlug,
+        string $accountScope,
         string $password,
         string $token,
         string $ip,
         ?string $userAgent,
     ): string {
-        $user = $this->users->findByEmail($email, $schoolSlug);
+        $user = $this->findPasswordResetUser($email, $schoolSlug, $accountScope);
         if ($user === null) {
             return Password::INVALID_USER;
         }
@@ -237,6 +245,20 @@ class AuthService extends BaseService
         );
 
         return $consumed ? Password::PASSWORD_RESET : Password::INVALID_TOKEN;
+    }
+
+    private function findPasswordResetUser(string $email, ?string $schoolSlug, string $accountScope): ?User
+    {
+        if ($accountScope !== 'platform') {
+            return $this->users->findByEmail($email, $schoolSlug);
+        }
+
+        return User::query()
+            ->with(['role', 'school'])
+            ->whereRaw('LOWER(email) = ?', [strtolower(trim($email))])
+            ->whereNull('school_id')
+            ->whereHas('role', fn ($query) => $query->where('name', UserRole::SuperAdministrator->value))
+            ->first();
     }
 
     // ─── Private helpers ────────────────────────────────────────────

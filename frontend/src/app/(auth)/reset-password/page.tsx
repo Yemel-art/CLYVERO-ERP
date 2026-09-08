@@ -45,6 +45,9 @@ function ResetPasswordForm() {
   const token = search.get('token') ?? '';
   const email = search.get('email') ?? '';
   const schoolSlug = search.get('school') ?? undefined;
+  const isPlatformReset = search.get('scope') === 'platform';
+  const forgotPasswordHref = isPlatformReset ? '/forgot-password?scope=platform' : '/forgot-password';
+  const loginHref = isPlatformReset ? '/owner/login' : '/login';
 
   const [showPwd, setShowPwd] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -68,7 +71,7 @@ function ResetPasswordForm() {
             {ui('Ce lien est incomplet. Veuillez demander un nouveau lien.', 'This password reset link is incomplete. Please request a new one.')}
           </p>
           <Link
-            href="/forgot-password"
+            href={forgotPasswordHref}
             className="mt-6 inline-block text-sm font-medium text-primary-600 hover:text-primary-700"
           >
             {ui('Demander un nouveau lien', 'Request a new link')}
@@ -87,9 +90,10 @@ function ResetPasswordForm() {
         password: values.password,
         passwordConfirmation: values.password_confirmation,
         schoolSlug,
+        accountScope: isPlatformReset ? 'platform' : 'school',
       });
       toast.success(ui('Votre mot de passe a été réinitialisé. Vous pouvez vous connecter.', 'Your password has been reset. Please sign in.'));
-      router.replace('/login');
+      router.replace(loginHref);
     } catch (err) {
       const axiosErr = err as AxiosError<ApiError>;
       const message = axiosErr.response?.data?.message
