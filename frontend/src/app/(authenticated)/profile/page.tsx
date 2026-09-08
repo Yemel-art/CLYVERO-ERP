@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { Eye, EyeOff, ShieldCheck, UserRound } from 'lucide-react';
 import { authApi } from '@/lib/api/auth';
 import { useAuthStore } from '@/store/auth';
+import { loginRouteFor } from '@/types/user';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -21,7 +21,6 @@ function isStrongPassword(value: string): boolean {
 }
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { language } = useTranslation();
   const ui = (french: string, english: string) => language === 'fr' ? french : english;
   const user = useAuthStore((state) => state.user);
@@ -130,7 +129,7 @@ export default function ProfilePage() {
         'Mot de passe modifié. Reconnectez-vous avec votre nouveau mot de passe.',
         'Password changed. Sign in again with your new password.',
       ));
-      router.replace('/login');
+      window.location.replace(loginRouteFor(user!.role.name));
     } catch (error: any) {
       const validationErrors = error?.response?.data?.errors;
       const message = validationErrors?.current_password?.[0]

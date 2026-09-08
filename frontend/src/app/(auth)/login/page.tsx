@@ -222,10 +222,12 @@ function LoginForm() {
   return (
     <Card>
       <CardHeader>
-        <Link href="/" className="mb-2 inline-flex w-fit items-center gap-1.5 text-xs font-medium text-secondary-500 hover:text-primary-700">
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
-          {ui('Retour à l’accueil', 'Back to welcome page')}
-        </Link>
+        {!isPlatformAccess && (
+          <Link href="/" className="mb-2 inline-flex w-fit items-center gap-1.5 text-xs font-medium text-secondary-500 hover:text-primary-700">
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+            {ui('Retour à l’accueil', 'Back to welcome page')}
+          </Link>
+        )}
         <CardTitle>
           {selectedRole
             ? ui(`Connexion ${selectedRole.fr}`, `${selectedRole.en} sign in`)

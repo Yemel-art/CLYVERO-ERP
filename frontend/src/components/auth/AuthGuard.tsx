@@ -41,7 +41,9 @@ export function AuthGuard({ children, allowedRoles }: AuthGuardProps) {
 
     if (!user) {
       const next = encodeURIComponent(pathname);
-      router.replace(`/login?next=${next}`);
+      router.replace(pathname.startsWith('/platform')
+        ? '/owner/login'
+        : `/login?next=${next}`);
       return;
     }
 

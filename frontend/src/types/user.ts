@@ -56,3 +56,8 @@ export function dashboardRouteFor(role: UserRoleName): string {
     case 'parent':        return '/parent/dashboard';
   }
 }
+
+/** Private platform owners must never fall back into the school login flow. */
+export function loginRouteFor(role: UserRoleName): string {
+  return role === 'super_administrator' ? '/owner/login' : '/login';
+}

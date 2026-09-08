@@ -11,6 +11,7 @@ import { useNotifications } from '@/hooks/notifications';
 import { cn } from '@/lib/utils/cn';
 import { useLanguageStore } from '@/store/language';
 import { useTranslation } from '@/hooks/useTranslation';
+import { loginRouteFor } from '@/types/user';
 
 export function Topbar() {
   const router = useRouter();
@@ -41,7 +42,7 @@ export function Topbar() {
     setOpen(false);
     await logout();
     toast.success(t('You have been logged out.'));
-    router.replace('/login');
+    window.location.replace(loginRouteFor(user!.role.name));
   };
 
   if (!user) return null;
