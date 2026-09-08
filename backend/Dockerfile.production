@@ -1,0 +1,23 @@
+FROM serversideup/php:8.4-fpm-nginx AS runtime
+
+USER root
+RUN install-php-extensions bcmath gd intl opcache pcntl pdo_pgsql redis zip
+
+WORKDIR /var/www/html
+COPY --chown=www-data:www-data composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader --no-scripts
+
+COPY --chown=www-data:www-data . .
+RUN mkdir -p storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && php artisan package:discover --ansi \
+    && php artisan storage:link
+
+ENV APP_ENV=production \
+    APP_DEBUG=false \
+    PHP_OPCACHE_ENABLE=1 \
+    PHP_MEMORY_LIMIT=256M \
+    NGINX_WEBROOT=/var/www/html/public
+
+USER www-data
+EXPOSE 8080

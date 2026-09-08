@@ -1,0 +1,72 @@
+services:
+  laravel.test:
+    entrypoint: ["start-container"]
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    tmpfs: !reset []
+    volumes:
+      - clyvero-vendor:/var/www/html/vendor
+
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+      WATCHPACK_POLLING: "true"
+      NEXT_PUBLIC_API_URL: "http://laravel.test"
+      NEXT_PUBLIC_API_BASE: "/api/v1"
+    command: >-
+      sh -lc "if [ ! -x node_modules/.bin/next ]; then
+      npm ci --no-audit --no-fund;
+      fi;
+      npm run dev -- --hostname 0.0.0.0 --port 3000"
+    volumes:
+      - ../frontend:/app
+      - clyvero-frontend-node-modules:/app/node_modules
+      - clyvero-frontend-next-cache:/app/.next
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    depends_on:
+      - laravel.test
+    networks:
+      - sail
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/login"]
+      interval: 5s
+      timeout: 3s
+      retries: 60
+      start_period: 60s
+
+  queue:
+    image: sail-8.4/app
+    entrypoint: ["start-container"]
+    working_dir: /var/www/html
+    restart: unless-stopped
+    command: php artisan queue:work redis --sleep=2 --tries=3 --timeout=120 --max-time=3600
+    environment:
+      WWWUSER: "${WWWUSER:-1000}"
+      LARAVEL_SAIL: 1
+    volumes:
+      - .:/var/www/html
+      - clyvero-vendor:/var/www/html/vendor
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    depends_on:
+      - redis
+      - laravel.test
+    networks:
+      - sail
+
+volumes:
+  clyvero-vendor:
+    name: clyvero-local-vendor
+  clyvero-frontend-node-modules:
+    name: clyvero-frontend-node-modules
+  clyvero-frontend-next-cache:
+    name: clyvero-frontend-next-cache
