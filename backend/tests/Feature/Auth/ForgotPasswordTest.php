@@ -12,6 +12,7 @@ use Database\Seeders\PermissionSeeder;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Tests\TestCase;
 
 final class ForgotPasswordTest extends TestCase
@@ -35,6 +36,7 @@ final class ForgotPasswordTest extends TestCase
         ])->assertOk()->assertJsonPath('success', true);
 
         Notification::assertSentTo($user, TenantPasswordResetNotification::class);
+        $this->assertInstanceOf(ShouldQueue::class, new TenantPasswordResetNotification(str_repeat('x', 64)));
         $this->assertDatabaseHas('tenant_password_reset_challenges', ['user_id' => $user->id]);
     }
 

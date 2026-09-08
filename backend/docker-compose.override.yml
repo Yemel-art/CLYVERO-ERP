@@ -42,6 +42,27 @@ services:
       retries: 60
       start_period: 60s
 
+  queue:
+    image: sail-8.4/app
+    entrypoint: ["start-container"]
+    working_dir: /var/www/html
+    restart: unless-stopped
+    command: php artisan queue:work redis --sleep=2 --tries=3 --timeout=120 --max-time=3600
+    environment:
+      WWWUSER: "${WWWUSER:-1000}"
+      LARAVEL_SAIL: 1
+    volumes:
+      - .:/var/www/html
+      - clyvero-vendor:/var/www/html/vendor
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    depends_on:
+      - redis
+      - laravel.test
+    networks:
+      - sail
+
 volumes:
   clyvero-vendor:
     name: clyvero-local-vendor
