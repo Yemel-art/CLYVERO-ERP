@@ -60,7 +60,9 @@ class AuthService extends BaseService
      */
     public function login(LoginDTO $dto): array
     {
-        $user = $this->users->findByEmail($dto->email, $dto->schoolSlug);
+        $user = $dto->accountScope === 'platform'
+            ? $this->findPlatformOwnerByEmail($dto->email)
+            : $this->users->findByEmail($dto->email, $dto->schoolSlug);
 
         if ($user === null) {
             $this->logFailedLogin($dto, reason: 'user_not_found');
@@ -253,6 +255,11 @@ class AuthService extends BaseService
             return $this->users->findByEmail($email, $schoolSlug);
         }
 
+        return $this->findPlatformOwnerByEmail($email);
+    }
+
+    private function findPlatformOwnerByEmail(string $email): ?User
+    {
         return User::query()
             ->with(['role', 'school'])
             ->whereRaw('LOWER(email) = ?', [strtolower(trim($email))])

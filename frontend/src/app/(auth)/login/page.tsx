@@ -90,7 +90,13 @@ function LoginForm() {
   const onSubmit = async (values: LoginValues) => {
     setServerError(null);
     try {
-      const result = await authApi.login(values.email, values.password, values.remember_me ?? false, values.school_slug);
+      const result = await authApi.login(
+        values.email,
+        values.password,
+        values.remember_me ?? false,
+        values.school_slug,
+        isPlatformAccess ? 'platform' : 'school',
+      );
       if (isOtpChallenge(result)) {
         setRememberForChallenge(values.remember_me ?? false);
         setOtpChallenge(result);

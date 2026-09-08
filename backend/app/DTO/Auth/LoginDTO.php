@@ -14,6 +14,7 @@ final readonly class LoginDTO
         public string $password,
         public string $ipAddress,
         public ?string $schoolSlug = null,
+        public string $accountScope = 'school',
         public ?string $userAgent = null,
         public bool $rememberMe = false,
     ) {

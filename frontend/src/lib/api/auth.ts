@@ -7,12 +7,13 @@ import type { AuthenticatedLoginResponse, LoginResponse, User } from '@/types/us
  * (or throws if `success: false`).
  */
 export const authApi = {
-  async login(email: string, password: string, rememberMe = false, schoolSlug?: string): Promise<LoginResponse> {
+  async login(email: string, password: string, rememberMe = false, schoolSlug?: string, accountScope: 'school' | 'platform' = 'school'): Promise<LoginResponse> {
     const { data } = await apiClient.post<ApiResponse<LoginResponse>>('/login', {
       email,
       password,
       remember_me: rememberMe,
-      school_slug: schoolSlug || undefined,
+      school_slug: accountScope === 'school' ? schoolSlug || undefined : undefined,
+      account_scope: accountScope,
     });
     return unwrap(data);
   },

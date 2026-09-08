@@ -31,6 +31,7 @@ final class PlatformOwnerLoginOtpTest extends TestCase
         $login = $this->postJson('/api/v1/login', [
             'email' => 'owner@clyvero.test',
             'password' => 'OwnerSecure2026!',
+            'account_scope' => 'platform',
         ])->assertOk()->assertJsonPath('data.requires_otp', true);
 
         $code = null;
@@ -52,5 +53,28 @@ final class PlatformOwnerLoginOtpTest extends TestCase
             ->assertJsonPath('data.user.role.name', 'super_administrator');
 
         $this->assertSame(1, $owner->tokens()->count());
+    }
+
+    public function test_platform_scope_selects_owner_when_a_school_user_has_the_same_email(): void
+    {
+        config()->set('login_security.admin_email_otp_enabled', false);
+        $this->seed([RoleSeeder::class, PermissionSeeder::class]);
+
+        User::factory()->create([
+            'email' => 'shared@clyvero.test',
+            'password' => Hash::make('SchoolPassword2026!'),
+        ]);
+        $owner = User::factory()->platformAdministrator()->create([
+            'email' => 'shared@clyvero.test',
+            'password' => Hash::make('OwnerPassword2026!'),
+        ]);
+
+        $this->postJson('/api/v1/login', [
+            'email' => 'shared@clyvero.test',
+            'password' => 'OwnerPassword2026!',
+            'account_scope' => 'platform',
+        ])->assertOk()
+            ->assertJsonPath('data.user.id', $owner->id)
+            ->assertJsonPath('data.user.role.name', 'super_administrator');
     }
 }

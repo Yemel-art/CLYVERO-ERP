@@ -43,6 +43,7 @@ final class AuthController extends ApiController
             password:   $request->string('password')->toString(),
             ipAddress:  $request->ip() ?? '0.0.0.0',
             schoolSlug: $request->filled('school_slug') ? $request->string('school_slug')->toString() : null,
+            accountScope: $request->string('account_scope')->toString() ?: 'school',
             userAgent:  $request->userAgent(),
             rememberMe: $request->boolean('remember_me'),
         );
