@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-set -e
-
-echo "Loading PHP dependencies into the container cache..."
-cp -a /opt/host-vendor/. /var/www/html/vendor/
-echo "PHP dependency cache ready."
-
-exec start-container
