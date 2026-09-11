@@ -1,5 +1,13 @@
 # Clyvero ERP production deployment
 
+For the **complete application on one Ubuntu VPS with GitHub Actions**, follow
+[the beginner step-by-step walkthrough](docs/VPS_SETUP_WALKTHROUGH.md), then keep
+[the Ubuntu VPS operations guide](docs/UBUNTU_VPS_GITHUB_ACTIONS.md) as a reference.
+It includes temporary HTTPS hostnames before buying a domain, all server commands,
+GitHub secrets, first deployment, backups, recovery, and switching domains later.
+The configuration below is the older split VPS/Vercel option; do not mix its Compose
+commands or backup scripts with the single-VPS setup.
+
 Recommended low-cost architecture:
 
 - Next.js frontend on Vercel (`app.yourdomain.com`).

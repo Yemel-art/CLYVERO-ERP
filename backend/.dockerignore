@@ -10,3 +10,7 @@ storage/framework/sessions/*
 storage/framework/views/*
 tests
 vendor
+storage
+bootstrap/cache/*.php
+public/storage
+.codex-backups
