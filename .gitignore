@@ -16,6 +16,9 @@
 **/*.pem
 **/*.key
 **/auth.json
+**/production.env
+**/production.env.*
+!**/production.env.example
 
 # Application-generated data
 /backend/storage/app/public/*
@@ -24,6 +27,7 @@
 /backend/storage/framework/sessions/*
 /backend/storage/framework/views/*
 /backend/storage/logs/*
+/backend/storage/framework/testing/disks/
 /backend/bootstrap/cache/*
 !/backend/bootstrap/cache/.gitignore
 /backend/public/storage
