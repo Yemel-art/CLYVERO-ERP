@@ -1,6 +1,7 @@
-name: Production quality gates
+name: CI and VPS deployment
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
     branches: [main]
@@ -10,7 +11,8 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # A newer merge must not interrupt a running production migration.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   backend:
@@ -83,14 +85,124 @@ jobs:
   production-images:
     runs-on: ubuntu-24.04
     needs: [backend, frontend]
+    timeout-minutes: 60
+    env:
+      PRODUCTION_API_DOMAIN: ${{ vars.API_DOMAIN }}
+      VPS_HOST: ${{ vars.VPS_HOST }}
+      VPS_USER: ${{ vars.VPS_USER }}
+      VPS_PORT: ${{ vars.VPS_PORT || '22' }}
     steps:
       - uses: actions/checkout@v4
+      - name: Select and validate deployment settings
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          api_domain=api.example.test
+          if [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_EVENT_NAME" != pull_request ]]; then
+            [[ "$PRODUCTION_API_DOMAIN" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] || { echo 'Set the API_DOMAIN repository variable (hostname only).'; exit 1; }
+            [[ "$VPS_HOST" =~ ^[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?$ ]] || { echo 'Set VPS_HOST to the VPS IPv4 address or hostname.'; exit 1; }
+            [[ "$VPS_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo 'Set VPS_USER to deploy.'; exit 1; }
+            [[ "$VPS_PORT" =~ ^[0-9]{1,5}$ ]] && (( 10#$VPS_PORT > 0 && 10#$VPS_PORT < 65536 ))
+            [[ -n "$VPS_SSH_KEY" && -n "$VPS_KNOWN_HOSTS" ]] || { echo 'Set VPS_SSH_KEY and VPS_KNOWN_HOSTS repository secrets.'; exit 1; }
+            api_domain="$PRODUCTION_API_DOMAIN"
+          fi
+          printf 'BUILD_API_DOMAIN=%s\n' "$api_domain" >> "$GITHUB_ENV"
+      - name: Check deployment shell scripts
+        run: |
+          for script in scripts/deploy-vps.sh scripts/vps-compose.sh scripts/backup-vps.sh; do bash -n "$script"; done
+          shellcheck scripts/deploy-vps.sh scripts/vps-compose.sh scripts/backup-vps.sh
       - name: Build Laravel production image
-        run: docker build --file backend/Dockerfile.production --tag clyvero-backend:ci backend
+        run: docker build --pull --file backend/Dockerfile.production --tag "clyvero-backend:$GITHUB_SHA" backend
       - name: Build Next.js production image
         run: >-
-          docker build --file frontend/Dockerfile.production
-          --build-arg NEXT_PUBLIC_API_BASE=https://api.example.test/api/v1
-          --build-arg NEXT_PUBLIC_API_URL=https://api.example.test
-          --build-arg NEXT_PUBLIC_API_HOSTNAME=api.example.test
-          --tag clyvero-frontend:ci frontend
+          docker build --pull --file frontend/Dockerfile.production
+          --build-arg "NEXT_PUBLIC_API_BASE=https://$BUILD_API_DOMAIN/api/v1"
+          --build-arg "NEXT_PUBLIC_API_URL=https://$BUILD_API_DOMAIN"
+          --build-arg "NEXT_PUBLIC_API_HOSTNAME=$BUILD_API_DOMAIN"
+          --tag "clyvero-frontend:$GITHUB_SHA" frontend
+      - name: Validate production Compose
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          BACKEND_ENV_FILE: ./deploy/production.env.example
+        run: docker compose --env-file deploy/production.env.example -f compose.vps.yml config --quiet
+      - name: Smoke test the production containers with a disposable database
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+          BACKEND_ENV_FILE: ${{ runner.temp }}/clyvero-smoke.env
+        run: |
+          set -Eeuo pipefail
+          cp deploy/production.env.example "$BACKEND_ENV_FILE"
+          sed -i 's|^APP_KEY=.*|APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=|' "$BACKEND_ENV_FILE"
+          compose=(docker compose --project-name clyvero-ci --env-file "$BACKEND_ENV_FILE" -f compose.vps.yml)
+          cleanup() {
+            "${compose[@]}" logs --tail=80 app queue scheduler
+            "${compose[@]}" down --volumes
+          }
+          trap cleanup EXIT
+          "${compose[@]}" up -d --wait --wait-timeout 180 postgres redis
+          "${compose[@]}" run --rm --no-deps -T -e AUTORUN_ENABLED=false app php artisan migrate --force --no-interaction
+          "${compose[@]}" run --rm --no-deps -T -e AUTORUN_ENABLED=false app php artisan db:seed --class=RoleSeeder --force --no-interaction
+          "${compose[@]}" run --rm --no-deps -T -e AUTORUN_ENABLED=false app php artisan db:seed --class=PermissionSeeder --force --no-interaction
+          "${compose[@]}" up -d --wait --wait-timeout 240 app frontend
+          "${compose[@]}" up -d queue scheduler
+          sleep 5
+          for service in queue scheduler; do
+            container_id="$("${compose[@]}" ps -q "$service")"
+            [[ -n "$container_id" && "$(docker inspect --format '{{.State.Running}}' "$container_id")" == true ]]
+          done
+          "${compose[@]}" run --rm --no-deps -T --entrypoint caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+      - name: Package the exact tested commit and images
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          set -Eeuo pipefail
+          mkdir release-metadata
+          printf 'IMAGE_TAG=%s\nBUILT_API_DOMAIN=%s\n' "$GITHUB_SHA" "$BUILD_API_DOMAIN" > release-metadata/.release.env
+          git archive --format=tar HEAD compose.vps.yml deploy/Caddyfile deploy/production.env.example scripts/deploy-vps.sh scripts/vps-compose.sh scripts/backup-vps.sh docs/UBUNTU_VPS_GITHUB_ACTIONS.md > release.tar
+          tar -rf release.tar -C release-metadata .release.env
+          gzip release.tar
+          docker save "clyvero-backend:$GITHUB_SHA" "clyvero-frontend:$GITHUB_SHA" | gzip -1 > images.tar.gz
+      - name: Configure verified SSH access
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/clyvero_deploy
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/clyvero_deploy ~/.ssh/known_hosts
+          cat > ~/.ssh/config <<EOF
+          Host clyvero-vps
+            HostName $VPS_HOST
+            User $VPS_USER
+            Port $VPS_PORT
+            HostKeyAlias clyvero-vps
+            IdentityFile ~/.ssh/clyvero_deploy
+            IdentitiesOnly yes
+            BatchMode yes
+            StrictHostKeyChecking yes
+            ConnectTimeout 15
+            ServerAliveInterval 30
+            ServerAliveCountMax 10
+          EOF
+          chmod 600 ~/.ssh/config
+          ssh clyvero-vps 'test -s /srv/clyvero/shared/production.env && docker info >/dev/null && test "$(uname -m)" = x86_64'
+      - name: Transfer and deploy on VPS
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          set -Eeuo pipefail
+          ssh clyvero-vps "mkdir -p /srv/clyvero/incoming/$GITHUB_SHA /srv/clyvero/releases/$GITHUB_SHA"
+          scp release.tar.gz images.tar.gz "clyvero-vps:/srv/clyvero/incoming/$GITHUB_SHA/"
+          ssh clyvero-vps bash -s -- "$GITHUB_SHA" <<'REMOTE'
+          set -Eeuo pipefail
+          sha="$1"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          tar -xzf "/srv/clyvero/incoming/$sha/release.tar.gz" -C "/srv/clyvero/releases/$sha" --no-same-owner
+          bash "/srv/clyvero/releases/$sha/scripts/deploy-vps.sh" "$sha"
+          REMOTE
+      - name: Remove runner SSH credentials
+        if: always()
+        run: rm -f ~/.ssh/clyvero_deploy ~/.ssh/known_hosts ~/.ssh/config
