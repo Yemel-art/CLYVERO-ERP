@@ -61,7 +61,13 @@ if [[ ! -f "${BASE}/shared/roles-initialized" ]]; then
   touch "${BASE}/shared/roles-initialized"
 fi
 
-"${COMPOSE[@]}" up -d --wait --wait-timeout 240 app frontend queue scheduler caddy
+"${COMPOSE[@]}" up -d --wait --wait-timeout 240 app frontend
+"${COMPOSE[@]}" up -d queue scheduler caddy
+sleep 5
+for service in queue scheduler caddy; do
+  container_id="$("${COMPOSE[@]}" ps -q "$service")"
+  [[ -n "$container_id" && "$(docker inspect --format '{{.State.Running}}' "$container_id")" == true ]]
+done
 # Laravel /up alone is a liveness check; also check DB/Redis through Laravel.
 # PHP code must be passed literally to the container.
 # shellcheck disable=SC2016

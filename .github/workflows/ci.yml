@@ -145,7 +145,13 @@ jobs:
           "${compose[@]}" run --rm --no-deps -T -e AUTORUN_ENABLED=false app php artisan migrate --force --no-interaction
           "${compose[@]}" run --rm --no-deps -T -e AUTORUN_ENABLED=false app php artisan db:seed --class=RoleSeeder --force --no-interaction
           "${compose[@]}" run --rm --no-deps -T -e AUTORUN_ENABLED=false app php artisan db:seed --class=PermissionSeeder --force --no-interaction
-          "${compose[@]}" up -d --wait --wait-timeout 240 app frontend queue scheduler
+          "${compose[@]}" up -d --wait --wait-timeout 240 app frontend
+          "${compose[@]}" up -d queue scheduler
+          sleep 5
+          for service in queue scheduler; do
+            container_id="$("${compose[@]}" ps -q "$service")"
+            [[ -n "$container_id" && "$(docker inspect --format '{{.State.Running}}' "$container_id")" == true ]]
+          done
           "${compose[@]}" run --rm --no-deps -T --entrypoint caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
       - name: Package the exact tested commit and images
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
