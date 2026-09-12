@@ -8,6 +8,8 @@ COMPOSE=(bash "${RELEASE_DIR}/scripts/vps-compose.sh")
 DESTINATION="/srv/clyvero/backups/$(date -u +%Y%m%dT%H%M%S)-${RANDOM}"
 mkdir -p "${DESTINATION}"
 
+# PostgreSQL variables expand inside the container.
+# shellcheck disable=SC2016
 "${COMPOSE[@]}" exec -T postgres sh -c \
   'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "${DESTINATION}/database.dump"
 [[ -s "${DESTINATION}/database.dump" ]]

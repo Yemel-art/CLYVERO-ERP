@@ -63,6 +63,8 @@ fi
 
 "${COMPOSE[@]}" up -d --wait --wait-timeout 240 app frontend queue scheduler caddy
 # Laravel /up alone is a liveness check; also check DB/Redis through Laravel.
+# PHP code must be passed literally to the container.
+# shellcheck disable=SC2016
 "${COMPOSE[@]}" exec -T app php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); \Illuminate\Support\Facades\DB::select("SELECT 1"); \Illuminate\Support\Facades\Cache::put("deployment-check", "ok", 60); if (\Illuminate\Support\Facades\Cache::get("deployment-check") !== "ok") { throw new \RuntimeException("Cache check failed"); }'
 curl --fail --silent --show-error --retry 18 --retry-delay 5 --retry-all-errors --connect-timeout 5 --max-time 15 "https://$(read_env API_DOMAIN)/up" >/dev/null
 curl --fail --silent --show-error --retry 18 --retry-delay 5 --retry-all-errors --connect-timeout 5 --max-time 15 "https://$(read_env APP_DOMAIN)/login" >/dev/null
