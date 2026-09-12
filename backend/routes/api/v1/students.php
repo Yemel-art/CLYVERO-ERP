@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\StudentController;
+use App\Http\Controllers\Api\V1\CarteScolaireImportController;
 use App\Http\Controllers\Api\V1\StudentImportController;
 use Illuminate\Support\Facades\Route;
 
@@ -12,6 +13,10 @@ use Illuminate\Support\Facades\Route;
  */
 
 Route::prefix('students')->group(function (): void {
+    Route::post('/imports/carte-scolaire/preview', [CarteScolaireImportController::class, 'preview'])
+        ->middleware('throttle:10,1');
+    Route::post('/imports/carte-scolaire/{import}/approve', [CarteScolaireImportController::class, 'approve'])
+        ->middleware('throttle:10,1');
     Route::get('/imports', [StudentImportController::class, 'index']);
     Route::post('/imports/analyze', [StudentImportController::class, 'analyze'])
         ->middleware('throttle:10,1');

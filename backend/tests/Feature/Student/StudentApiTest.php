@@ -152,8 +152,18 @@ final class StudentApiTest extends TestCase
     public function test_list_can_be_searched_and_paginated(): void
     {
         $this->actingAsAdministrator();
-        $this->student(['first_name' => 'Junior', 'last_name' => 'Tah']);
-        $this->student(['first_name' => 'Marie', 'last_name' => 'Ngono']);
+        $this->student([
+            'first_name' => 'Junior',
+            'last_name' => 'Tah',
+            'middle_name' => null,
+            'email' => 'junior.tah@example.test',
+        ]);
+        $this->student([
+            'first_name' => 'Marie',
+            'last_name' => 'Ngono',
+            'middle_name' => null,
+            'email' => 'marie.ngono@example.test',
+        ]);
         $this->getJson('/api/v1/students?q=Junior')->assertOk()
             ->assertJsonCount(1, 'data')->assertJsonPath('data.0.first_name', 'Junior');
         $this->getJson('/api/v1/students?q=J')->assertOk()
