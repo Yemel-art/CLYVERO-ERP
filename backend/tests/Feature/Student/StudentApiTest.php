@@ -181,7 +181,11 @@ final class StudentApiTest extends TestCase
     public function test_list_can_find_students_by_full_name_and_class(): void
     {
         $this->actingAsAdministrator();
-        $student = $this->student(['first_name' => 'Junior', 'last_name' => 'Tah']);
+        $student = $this->student([
+            'first_name' => 'Junior',
+            'last_name' => 'Tah',
+            'middle_name' => null,
+        ]);
 
         $this->getJson('/api/v1/students?q=Junior%20Tah')->assertOk()
             ->assertJsonCount(1, 'data')
