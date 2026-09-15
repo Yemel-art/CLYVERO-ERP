@@ -224,7 +224,14 @@ final class OfficialStudentImportService extends BaseService
     /** @return array<int, array<string, string>> */
     private function readRows(UploadedFile $file): array
     {
-        $rows = $this->reader->read($file);
+        try {
+            $rows = $this->reader->read($file);
+        } catch (Throwable $exception) {
+            report($exception);
+            throw ValidationException::withMessages([
+                'file' => ['The selected spreadsheet is invalid or unsafe and could not be read.'],
+            ]);
+        }
         if ($rows === []) throw ValidationException::withMessages(['file' => ['The selected file contains no student rows.']]);
         if (count($rows) > 10000) throw ValidationException::withMessages(['file' => ['A single import cannot exceed 10,000 rows.']]);
         return $rows;

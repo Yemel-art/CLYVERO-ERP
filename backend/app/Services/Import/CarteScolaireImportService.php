@@ -15,6 +15,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Throwable;
 
 /** CSV/XLSX import for an administrator-exported Carte Scolaire list.
  * No external credentials, OTP, or automated access are used or stored. */
@@ -100,7 +101,14 @@ final class CarteScolaireImportService
     {
         $extension = strtolower($file->getClientOriginalExtension());
         if ($extension === 'xlsx') {
-            $sheet = IOFactory::load($file->getRealPath())->getActiveSheet();
+            try {
+                $sheet = IOFactory::load($file->getRealPath())->getActiveSheet();
+            } catch (Throwable $exception) {
+                report($exception);
+                throw ValidationException::withMessages([
+                    'file' => ['The selected spreadsheet is invalid or unsafe and could not be read.'],
+                ]);
+            }
             $matrix = $sheet->toArray(null, true, true, false);
             $headers = array_shift($matrix);
             if (! $headers) throw ValidationException::withMessages(['file' => ['The spreadsheet has no header row.']]);

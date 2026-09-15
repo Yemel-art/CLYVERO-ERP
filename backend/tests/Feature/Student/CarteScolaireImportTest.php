@@ -16,6 +16,25 @@ final class CarteScolaireImportTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_malformed_xlsx_returns_validation_error_instead_of_server_error(): void
+    {
+        $this->seed();
+        $admin = User::query()->whereHas('role', fn ($query) => $query->where('name', 'administrator'))->firstOrFail();
+        Sanctum::actingAs($admin, ['*']);
+        $year = AcademicYear::query()->where('school_id', $admin->school_id)->active()->firstOrFail();
+        $file = UploadedFile::fake()->create(
+            'carte-scolaire.xlsx',
+            1,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+
+        $this->post('/api/v1/students/imports/carte-scolaire/preview', [
+            'file' => $file,
+            'academic_year_id' => $year->id,
+            'cycle' => 'secondary_general',
+        ])->assertUnprocessable()->assertJsonValidationErrors('file');
+    }
+
     public function test_administrator_previews_then_approves_an_exact_class_match(): void
     {
         $this->seed();

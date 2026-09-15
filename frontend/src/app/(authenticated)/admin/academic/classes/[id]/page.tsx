@@ -85,7 +85,14 @@ export default function ClassDetailPage() {
         student.gender === 'female' ? 'Female' : 'Male',
       ]),
     ];
-    const escapeCell = (value: string) => `"${String(value).replace(/"/g, `""`)}"`;
+    const escapeCell = (value: string) => {
+      const text = String(value);
+      // Spreadsheet programs may evaluate formula-like CSV cells even when
+      // quoted. A leading tab is displayed harmlessly and our importer trims
+      // it, so an exported roster remains safe and round-trip compatible.
+      const safe = /^[\s]*[=+\-@]/.test(text) ? `\t${text}` : text;
+      return `"${safe.replace(/"/g, `""`)}"`;
+    };
     const csv = `\uFEFF${rows.map((row) => row.map(escapeCell).join(';')).join('\r\n')}`;
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
     const anchor = document.createElement('a');

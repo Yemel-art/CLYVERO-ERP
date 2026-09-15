@@ -23,6 +23,12 @@ final class TeacherController extends ApiController
 
     public function index(Request $request): JsonResponse
     {
+        $request->validate([
+            'q' => ['sometimes', 'string', 'max:160'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'sort' => ['sometimes', 'in:first_name,last_name,employee_number,status,created_at'],
+            'order' => ['sometimes', 'in:asc,desc'],
+        ]);
         $page = $this->teachers->list(
             filters:   $request->only(['q', 'status', 'gender', 'include_archived']),
             with:      ['user'],

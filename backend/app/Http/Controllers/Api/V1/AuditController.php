@@ -22,7 +22,8 @@ final class AuditController extends ApiController
         if ($request->filled('from')) $q->where('created_at', '>=', $request->input('from'));
         if ($request->filled('to'))   $q->where('created_at', '<=', $request->input('to'));
 
-        $page = $q->orderByDesc('created_at')->paginate((int) $request->integer('per_page', 50));
+        $page = $q->orderByDesc('created_at')
+            ->paginate(min(max((int) $request->integer('per_page', 50), 1), 100));
 
         $data = collect($page->items())->map(fn (AuditLog $a) => [
             'id'           => $a->id,

@@ -3,6 +3,7 @@
 !.env.example
 .git
 .phpunit.cache
+bootstrap/cache/*.php
 node_modules
 storage/logs/*
 storage/framework/cache/*

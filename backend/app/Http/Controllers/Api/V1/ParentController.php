@@ -25,6 +25,12 @@ final class ParentController extends ApiController
 
     public function index(Request $request): JsonResponse
     {
+        $request->validate([
+            'q' => ['sometimes', 'string', 'max:160'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'sort' => ['sometimes', 'in:first_name,last_name,email,created_at'],
+            'order' => ['sometimes', 'in:asc,desc'],
+        ]);
         $page = $this->parents->list(
             filters:   $request->only(['q', 'gender', 'is_active', 'has_children', 'include_archived']),
             with:      ['user', 'students'],

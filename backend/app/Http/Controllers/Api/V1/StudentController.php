@@ -45,6 +45,12 @@ final class StudentController extends ApiController
 
     public function index(Request $request): JsonResponse
     {
+        $request->validate([
+            'q' => ['sometimes', 'string', 'max:160'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'sort' => ['sometimes', 'in:first_name,last_name,admission_number,status,created_at'],
+            'order' => ['sometimes', 'in:asc,desc'],
+        ]);
         $filters = $request->only([
             'q', 'status', 'gender', 'class_id', 'academic_year_id', 'include_archived',
         ]);

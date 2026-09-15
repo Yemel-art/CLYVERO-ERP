@@ -37,7 +37,8 @@ final class UserManagementController extends ApiController
             $q->where('is_active', filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN));
         }
 
-        $page = $q->orderBy('first_name')->paginate((int) $request->integer('per_page', 25));
+        $page = $q->orderBy('first_name')
+            ->paginate(min(max((int) $request->integer('per_page', 25), 1), 100));
 
         $data = collect($page->items())->map(fn (User $u) => [
             'id'         => $u->id,

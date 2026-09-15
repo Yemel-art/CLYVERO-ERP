@@ -129,6 +129,58 @@ class FinanceApiTest extends TestCase
         $this->assertEquals(Invoice::STATUS_PAID, $invoice->status);
     }
 
+    public function test_repeated_invoice_generation_is_idempotent(): void
+    {
+        Sanctum::actingAs($this->admin, ['*']);
+        FeeStructure::create([
+            'academic_year_id' => $this->year->id,
+            'name' => 'Tuition', 'category' => 'tuition',
+            'amount' => '108000.00', 'frequency' => 'annual', 'is_required' => true,
+        ]);
+        $student = Student::factory()->create([
+            'school_id' => $this->year->school_id,
+            'academic_year_id' => $this->year->id,
+        ]);
+        $payload = ['student_id' => $student->id, 'academic_year_id' => $this->year->id];
+
+        $first = $this->postJson('/api/v1/finance/invoices/generate', $payload)->assertCreated();
+        $second = $this->postJson('/api/v1/finance/invoices/generate', $payload)->assertCreated();
+
+        $this->assertSame($first->json('data.id'), $second->json('data.id'));
+        $this->assertSame(1, Invoice::query()
+            ->where('student_id', $student->id)
+            ->where('academic_year_id', $this->year->id)
+            ->count());
+    }
+
+    public function test_decimal_payments_keep_an_exact_balance(): void
+    {
+        Sanctum::actingAs($this->admin, ['*']);
+        FeeStructure::create([
+            'academic_year_id' => $this->year->id,
+            'name' => 'Exact tuition', 'category' => 'tuition',
+            'amount' => '100000.55', 'frequency' => 'annual', 'is_required' => true,
+        ]);
+        $student = Student::factory()->create([
+            'school_id' => $this->year->school_id,
+            'academic_year_id' => $this->year->id,
+        ]);
+        $invoiceId = $this->postJson('/api/v1/finance/invoices/generate', [
+            'student_id' => $student->id,
+            'academic_year_id' => $this->year->id,
+        ])->assertCreated()->json('data.id');
+
+        $this->postJson("/api/v1/finance/invoices/{$invoiceId}/payments", [
+            'paid_at' => now()->toDateString(),
+            'amount' => '40000.11',
+            'method' => 'cash',
+        ])->assertCreated();
+
+        $invoice = Invoice::query()->findOrFail($invoiceId);
+        $this->assertSame('40000.11', $invoice->paid);
+        $this->assertSame('60000.44', $invoice->balance);
+    }
+
     public function test_administrator_cannot_generate_an_invoice_for_another_school_student(): void
     {
         Sanctum::actingAs($this->admin, ['*']);

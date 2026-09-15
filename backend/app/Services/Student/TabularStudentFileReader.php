@@ -13,6 +13,9 @@ use ZipArchive;
 final class TabularStudentFileReader
 {
     private const SPREADSHEET_NAMESPACE = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    private const MAX_ZIP_ENTRIES = 5000;
+    private const MAX_SHEET_BYTES = 50 * 1024 * 1024;
+    private const MAX_SHARED_STRINGS_BYTES = 20 * 1024 * 1024;
 
     /** @return array<int, array<string, string>> */
     public function read(UploadedFile $file): array
@@ -64,11 +67,17 @@ final class TabularStudentFileReader
         }
 
         try {
-            $shared = $this->sharedStrings($zip);
-            $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-            if ($sheetXml === false) {
-                throw new RuntimeException('The first Excel worksheet is missing.');
+            if ($zip->numFiles > self::MAX_ZIP_ENTRIES) {
+                throw new RuntimeException('The Excel file contains too many internal files.');
             }
+            $shared = $this->sharedStrings($zip);
+            $sheetXml = $this->boundedEntry(
+                $zip,
+                'xl/worksheets/sheet1.xml',
+                self::MAX_SHEET_BYTES,
+                'The first Excel worksheet is missing.',
+                'The first Excel worksheet is too large.',
+            );
         } finally {
             $zip->close();
         }
@@ -125,10 +134,16 @@ final class TabularStudentFileReader
     /** @return array<int, string> */
     private function sharedStrings(ZipArchive $zip): array
     {
-        $sharedXml = $zip->getFromName('xl/sharedStrings.xml');
-        if ($sharedXml === false) {
+        if ($zip->locateName('xl/sharedStrings.xml') === false) {
             return [];
         }
+        $sharedXml = $this->boundedEntry(
+            $zip,
+            'xl/sharedStrings.xml',
+            self::MAX_SHARED_STRINGS_BYTES,
+            'The Excel shared-string table is missing.',
+            'The Excel shared-string table is too large.',
+        );
 
         $xml = $this->xml($sharedXml, 'The Excel shared-string table contains invalid XML.');
         $root = $this->main($xml);
@@ -189,9 +204,13 @@ final class TabularStudentFileReader
 
     private function xml(string $content, string $message): SimpleXMLElement
     {
+        if (preg_match('/<!DOCTYPE|<!ENTITY/i', $content) === 1) {
+            throw new RuntimeException($message);
+        }
+
         $previous = libxml_use_internal_errors(true);
         try {
-            $xml = simplexml_load_string($content);
+            $xml = simplexml_load_string($content, SimpleXMLElement::class, LIBXML_NONET | LIBXML_COMPACT);
         } finally {
             libxml_clear_errors();
             libxml_use_internal_errors($previous);
@@ -202,6 +221,32 @@ final class TabularStudentFileReader
         }
 
         return $xml;
+    }
+
+    private function boundedEntry(
+        ZipArchive $zip,
+        string $name,
+        int $maximumBytes,
+        string $missingMessage,
+        string $oversizedMessage,
+    ): string {
+        $stat = $zip->statName($name);
+        if (! is_array($stat)) {
+            throw new RuntimeException($missingMessage);
+        }
+        if (($stat['size'] ?? 0) > $maximumBytes) {
+            throw new RuntimeException($oversizedMessage);
+        }
+
+        $content = $zip->getFromName($name, $maximumBytes + 1);
+        if ($content === false) {
+            throw new RuntimeException($missingMessage);
+        }
+        if (strlen($content) > $maximumBytes) {
+            throw new RuntimeException($oversizedMessage);
+        }
+
+        return $content;
     }
 
     private function main(SimpleXMLElement $element): SimpleXMLElement

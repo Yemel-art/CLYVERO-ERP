@@ -87,7 +87,8 @@ final class FinanceController extends ApiController
             $q->where(fn ($q) => $q->where('invoice_number', 'ilike', $like)
                 ->orWhereHas('student', fn ($s) => $s->where('first_name', 'ilike', $like)->orWhere('last_name', 'ilike', $like)));
         }
-        $page = $q->orderByDesc('issued_at')->paginate((int) $request->integer('per_page', 25));
+        $perPage = min(max((int) $request->integer('per_page', 25), 1), 100);
+        $page = $q->orderByDesc('issued_at')->paginate($perPage);
         return $this->ok(
             InvoiceResource::collection($page->items()),
             'Invoices retrieved.',

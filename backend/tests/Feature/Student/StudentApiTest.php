@@ -197,6 +197,19 @@ final class StudentApiTest extends TestCase
             ->assertJsonPath('data.0.id', $student->id);
     }
 
+    public function test_list_rejects_unsafe_sorting_and_oversized_pages(): void
+    {
+        $this->actingAsAdministrator();
+
+        $this->getJson('/api/v1/students?sort=not_a_column')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('sort');
+
+        $this->getJson('/api/v1/students?per_page=1000000')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('per_page');
+    }
+
     public function test_unauthenticated_request_is_rejected(): void
     {
         $this->getJson('/api/v1/students')->assertUnauthorized()->assertJsonPath('error_code', 'unauthenticated');
