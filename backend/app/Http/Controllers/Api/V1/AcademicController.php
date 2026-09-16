@@ -95,7 +95,7 @@ final class AcademicController extends ApiController
         $this->authorize('viewAny', Subject::class);
         $page = $this->subjects->searchPaginated(
             $request->only(['q', 'is_active', 'include_archived', 'education_system']),
-            (int) $request->integer('per_page', 50),
+            min(max((int) $request->integer('per_page', 50), 1), 100),
         );
         return $this->ok(
             data: SubjectResource::collection($page->items()),
@@ -144,7 +144,7 @@ final class AcademicController extends ApiController
         $page = $this->classes->searchPaginated(
             $request->only(['q', 'academic_year_id', 'grade_level', 'is_active', 'include_archived']),
             ['academicYear', 'formMaster'],
-            (int) $request->integer('per_page', 30),
+            min(max((int) $request->integer('per_page', 30), 1), 100),
         );
 
         // Add students_count to each item.

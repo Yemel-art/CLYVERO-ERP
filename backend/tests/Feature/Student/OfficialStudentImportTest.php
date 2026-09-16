@@ -21,6 +21,22 @@ final class OfficialStudentImportTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_malformed_xlsx_returns_validation_error_instead_of_server_error(): void
+    {
+        $this->seed();
+        $admin = User::query()->whereHas('role', fn ($query) => $query->where('name', 'administrator'))->firstOrFail();
+        Sanctum::actingAs($admin, ['*']);
+        $file = UploadedFile::fake()->create(
+            'students.xlsx',
+            1,
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        );
+
+        $this->postJson('/api/v1/students/imports/analyze', ['file' => $file])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('file');
+    }
+
     public function test_official_csv_preview_confirm_and_repeat_are_idempotent(): void
     {
         $this->seed();

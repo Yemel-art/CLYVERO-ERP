@@ -211,6 +211,9 @@ class Student extends Model
                 ->orWhere('admission_number', 'ilike', $like)
                 ->orWhere('official_matricule', 'ilike', $like)
                 ->orWhere('email', 'ilike', $like)
+                // Users commonly search with only the visible first and last
+                // names. An optional middle name must not break that match.
+                ->orWhereRaw("concat_ws(' ', first_name, last_name) ILIKE ?", [$like])
                 ->orWhereRaw("concat_ws(' ', first_name, middle_name, last_name) ILIKE ?", [$like])
                 ->orWhereHas('schoolClass', function (Builder $class) use ($like): void {
                     $class->where('name', 'ilike', $like)

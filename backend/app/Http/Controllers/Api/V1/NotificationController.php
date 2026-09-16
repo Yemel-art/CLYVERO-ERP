@@ -25,7 +25,9 @@ final class NotificationController extends ApiController
         $q = Notification::where('user_id', $user->id);
         if ($request->boolean('unread_only')) $q->whereNull('read_at');
 
-        $items = $q->orderByDesc('created_at')->limit((int) $request->integer('limit', 30))->get();
+        $items = $q->orderByDesc('created_at')
+            ->limit(min(max((int) $request->integer('limit', 30), 1), 100))
+            ->get();
 
         return $this->ok([
             'data' => $items->map(fn (Notification $n) => [

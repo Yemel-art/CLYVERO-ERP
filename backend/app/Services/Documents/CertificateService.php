@@ -7,6 +7,7 @@ namespace App\Services\Documents;
 use App\Models\AcademicYear;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\StudentEnrollment;
 use App\Models\Teacher;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
@@ -43,8 +44,18 @@ class CertificateService
 
     public function schoolCertificate(Student $student, AcademicYear $academicYear, string $language): Response
     {
-        $student->load('schoolClass');
         abort_unless($student->school_id === $academicYear->school_id, 404);
+        $enrollment = StudentEnrollment::query()
+            ->where('student_id', $student->id)
+            ->where('academic_year_id', $academicYear->id)
+            ->with('schoolClass')
+            ->first();
+        $schoolClass = $enrollment?->schoolClass;
+        if ($schoolClass === null && $student->academic_year_id === $academicYear->id) {
+            $student->load('schoolClass');
+            $schoolClass = $student->schoolClass;
+        }
+        abort_if($schoolClass === null, 422, 'The student was not enrolled in the selected academic year.');
         $school = $academicYear->school()->firstOrFail();
         $data = [
             'language' => $language,
@@ -53,7 +64,7 @@ class CertificateService
                 'full_name' => $student->full_name,
                 'admission_number' => $student->admission_number,
                 'date_of_birth' => $student->date_of_birth->toDateString(),
-                'class' => $student->schoolClass?->name,
+                'class' => $schoolClass->name,
                 'photo_url' => $student->photo_url,
             ],
             'academic_year' => $academicYear->title,

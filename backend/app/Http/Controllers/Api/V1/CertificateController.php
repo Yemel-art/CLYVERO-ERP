@@ -20,6 +20,8 @@ final class CertificateController extends ApiController
 
     public function employment(GenerateCertificateRequest $request, Teacher $teacher): Response
     {
+        $this->authorize('view', $teacher);
+
         return $this->certificates->employmentCertificate(
             $teacher,
             $request->string('language', 'fr')->toString(),
@@ -28,6 +30,8 @@ final class CertificateController extends ApiController
 
     public function school(GenerateCertificateRequest $request, Student $student): Response
     {
+        $this->authorize('view', $student);
+
         /** @var AcademicYear $academicYear */
         $academicYear = AcademicYear::findOrFail($request->string('academic_year_id')->toString());
 

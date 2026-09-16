@@ -18,7 +18,7 @@ class RecordPaymentRequest extends FormRequest
     {
         return [
             'paid_at'   => ['required', 'date'],
-            'amount'    => ['required', 'numeric', 'min:0.01'],
+            'amount'    => ['required', 'numeric', 'decimal:0,2', 'min:0.01', 'max:9999999999.99'],
             'method'    => ['required', 'in:cash,bank_transfer,mtn_momo,orange_money,cheque,other'],
             'reference' => ['nullable', 'string', 'max:120'],
             'notes'     => ['nullable', 'string', 'max:300'],

@@ -9,6 +9,7 @@
 /storage/framework/cache/data/*
 /storage/framework/sessions/*
 /storage/framework/views/*
+/storage/framework/testing/
 /bootstrap/cache/*
 !/bootstrap/cache/.gitignore
 .env

@@ -34,7 +34,12 @@ class ReportCardService
             ->where('academic_year_id', $term->academic_year_id)
             ->with(['schoolClass.academicYear.school', 'schoolClass.formMaster'])
             ->first();
-        $reportClass = $enrollment?->schoolClass ?? $student->schoolClass;
+        $reportClass = $enrollment?->schoolClass;
+        if ($reportClass === null && $student->academic_year_id === $term->academic_year_id) {
+            $student->load('schoolClass');
+            $reportClass = $student->schoolClass;
+        }
+        abort_if($reportClass === null, 422, 'The student was not enrolled in the academic year for this term.');
         $report = $this->grades->termReportForStudent($student, $term);
 
         $rank = null;
